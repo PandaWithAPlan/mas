@@ -1,0 +1,78 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "autoshare": false,
+  "skills": {
+    "osint-methodology": {
+      "path": "skills/osint-methodology/SKILL.md",
+      "description": "Three-tier OSINT methodology (White/Grey/Black) + Grey escalation protocol with Human-in-the-Loop"
+    },
+    "osint-regions": {
+      "path": "skills/osint-regions/SKILL.md",
+      "description": "Regional specialization: СНГ (Russia, Belarus, Ukraine, Kazakhstan) and Europe (EU/EEA/UK) — registries, social networks, search operators, legal frameworks"
+    },
+    "osint-tools-infra": {
+      "path": "skills/osint-tools-infra/SKILL.md",
+      "description": "Network reconnaissance tools: Shodan, crt.sh, SecurityTrails, DNSDumpster, BGPView, theHarvester, Maltego, SpiderFoot, FOFA, Censys, ZoomEye. Use for domains, IPs, and infrastructure."
+    },
+    "osint-tools-identity": {
+      "path": "skills/osint-tools-identity/SKILL.md",
+      "description": "Identity & breach tools: Sherlock, Snoop Project, HIBP, Holehe, LeakCheck, IntelX, DeHashed. Use for usernames, emails, phones, and persons."
+    },
+    "osint-tools-grey": {
+      "path": "skills/osint-tools-grey/SKILL.md",
+      "description": "Grey OSINT tools: Darknet monitoring, Telegram OSINT bots (СНГ). Safety gate — load ONLY after user confirms Grey escalation."
+    },
+    "osint-tools-analysis": {
+      "path": "skills/osint-tools-analysis/SKILL.md",
+      "description": "File/metadata analysis and search dorks: ExifTool, VirusTotal, urlscan.io, Google/Yandex/Bing/GitHub dorks. Use for document analysis, URL scanning, and advanced search queries."
+    },
+    "osint-tools-scripts": {
+      "path": "skills/osint-tools-scripts/SKILL.md",
+      "description": "Ready-to-use Python templates for OSINT automation: username search, email leak check, DNS/WHOIS recon, EGR Belarus parser, correlation graph builder. Lazy-load — only when a script is actually needed."
+    },
+    "osint-reporting": {
+      "path": "skills/osint-reporting/SKILL.md",
+      "description": "Professional OSINT reports in markdown with Mermaid diagrams (entity graph, infrastructure map, timeline, process flow, reliability heatmap). Enforces coverage gate: asks user whether enough data is collected before generating the final report."
+    },
+    "osint-tools-web": {
+      "path": "skills/osint-tools-web/SKILL.md",
+      "description": "Web intelligence tools — whatweb (technology fingerprinting), gau + waybackurls (URL discovery from archives), eyewitness (automated screenshots). Use for domain and website reconnaissance."
+    },
+    "osint-tools-sn0int": {
+      "path": "skills/osint-tools-sn0int/SKILL.md",
+      "description": "Semi-automatic OSINT framework with 150+ modules covering email, username, phone, domain, IP, cryptocurrency. Modular alternative to running individual tools for complex investigations."
+    },
+    "osint-tools-registries": {
+      "path": "skills/osint-tools-registries/SKILL.md",
+      "description": "State registries and public databases of CIS countries — EGR, EGRUL, KAD, FSSP, Fedresurs, bankrot.gov.by, EDR, OpenCorporates. Use for legal entity due diligence in СНГ."
+    },
+    "osint-tools-cis": {
+      "path": "skills/osint-tools-cis/SKILL.md",
+      "description": "CIS-specific tools — VKontakte (220vk, vkpt, TopDB), Face Recognition (search4faces, FindClone), YaSeeker (Yandex account OSINT), tel.belinf.net (phone search BY/RU/UA). Use for persons/phones/photos in СНГ region."
+    },
+    "osint-toolkit": {
+      "path": "skills/osint-toolkit/SKILL.md",
+      "description": "[DEPRECATED] Legacy meta-skill. Use osint-tools-infra, osint-tools-identity, osint-tools-grey, osint-tools-analysis, osint-tools-scripts, osint-tools-web, osint-tools-sn0int instead."
+    }
+  },
+  "agent": {
+    "osint-analyst": {
+      "model": "ollama-cloud/deepseek-v4-pro",
+      "skills": [
+        "osint-methodology",
+        "osint-regions",
+        "osint-tools-infra",
+        "osint-tools-identity",
+        "osint-tools-grey",
+        "osint-tools-analysis",
+        "osint-tools-scripts",
+        "osint-tools-web",
+        "osint-tools-sn0int",
+        "osint-tools-registries",
+        "osint-tools-cis",
+        "osint-reporting"
+      ],
+      "permission": {"read": "allow", "edit": "allow", "bash": "allow", "webfetch": "allow"}
+    }
+  }
+}
