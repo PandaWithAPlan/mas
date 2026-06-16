@@ -5,6 +5,44 @@ Format: [MAJOR.MINOR.PATCH] — YYYY-MM-DD
 
 ---
 
+## [1.4.0] — 2026-06-16
+
+### Added
+- **Функциональный гейт приёмки** — провалившиеся тесты больше не могут пройти в ACCEPT.
+  Ранее `guardian-verdict` явно не давал test_outcome переопределять severity-решение,
+  поэтому FAILED-тест мог дойти до ACCEPT, если Guardian не зафиксировал отдельный
+  CRITICAL-finding (например, при пропуске зоны Test Analysis под context-лимитом).
+  - `guardian-verdict` — новое Правило 0: `test_outcome == FAILED` или `p0_failed`
+    понижает рекомендацию минимум до REWORK; провал P0 непереопределяем (как BLOCKER).
+    Добавлен вход `p0_failed`
+  - `guardian.md` — передаёт `p0_failed` в `guardian-verdict`
+  - `team-lead.md` — критерий ACCEPT дополнен обязательным предусловием «P0 = 100% PASSED»
+  - `README.md` — раздел «Верификация» описывает функциональный гейт
+- `test-progress` — новое терминальное решение `STOP_COMPLETE` для случая полного покрытия
+  (100% P0+P1+P2). Раньше такой прогон помечался `STOP_PARTIAL` и ошибочно получал
+  секцию «PARTIAL COMPLETION» / итог PARTIAL при фактически полном покрытии
+  - `tester.md` — добавлено решение STOP_COMPLETE в execution loop
+
+### Changed
+- `guardian-scope` — порядок зон анализа приведён к `guardian.md`:
+  security → correctness → **test_analysis** → code_quality → tech_debt (раньше test_analysis
+  стоял после code_quality, что противоречило агенту и грозило отбрасыванием анализа тестов
+  под context-лимитом)
+- `guardian.md` — устранён конфликт «confidence понижает severity». Теперь severity и
+  confidence ортогональны (как и предписывает `confidence-calibrate` и `guardian-severity`):
+  низкая уверенность аннотируется, но НЕ смягчает severity (CRITICAL с confidence 30%
+  остаётся CRITICAL с пометкой «требует дорасследования»)
+
+### Fixed
+- `tester.md` — уточнена область права edit на `tests/**` (написание автотестов под план;
+  запрет на правку исходников «ради зелёного теста»)
+- `incident-protocol` — в список критических секций tester'а явно добавлено «P0 < 100% ⇒
+  INSUFFICIENT» (KPI Tester'а раньше не был назван в таблице достаточности покрытия)
+- `task-metrics` — унифицированы ключи агентов в `agents_used`: дефис (`coder-front`/`coder-back`)
+  как в opencode.json, вместо смешения с подчёркиванием
+
+---
+
 ## [1.3.1] — 2026-06-16
 
 ### Fixed

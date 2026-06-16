@@ -43,6 +43,8 @@ findings: [
 
 test_outcome: "PASSED" | "FAILED" | "PARTIAL"
 
+p0_failed: boolean                             // есть ли хотя бы один FAILED тест с приоритетом P0 (из TR-NNN.md)
+
 analysis_complete: boolean                     // true если все 5 зон покрыты, false если PARTIAL
 
 cycle_number: 1–3
@@ -54,6 +56,24 @@ plateau_indicators: {
 ```
 
 ## Шаг 1. Примени decision rules
+
+### Правило 0: Функциональный гейт — FAILED тесты блокируют ACCEPT
+
+Этот гейт применяется **до** severity-правил и не зависит от findings Guardian.
+
+Если `test_outcome === "FAILED"` ИЛИ `p0_failed === true`:
+
+```
+recommendation: МИНИМУМ "RECOMMEND REWORK" (никогда не ACCEPT)
+reasoning: "Функциональное тестирование выявило провалы (p0_failed=[..]). 
+  Приёмка невозможна до прохождения тестов, независимо от инженерных findings."
+```
+
+- При `p0_failed === true` гейт **непереопределяем** (`overridable: false`) — провал критического теста эквивалентен BLOCKER по последствиям для приёмки.
+- При `test_outcome === "FAILED"` без P0-провалов гейт переопределяем (`overridable: true`) на тех же условиях, что и CRITICAL (см. Правило 2).
+- Этот гейт закрывает дыру: ранее FAILED-тест мог пройти в ACCEPT, если Guardian не зафиксировал отдельный CRITICAL-finding (например, при пропуске зоны Test Analysis под context-лимитом).
+
+Если гейт сработал — итоговая рекомендация формируется как **максимум по строгости** между этим гейтом и результатом severity-правил 1–5 (BLOCKER/ESCALATE сохраняют приоритет).
 
 ### Правило 1: BLOCKER → RECOMMEND REWORK (автоматически)
 
@@ -120,11 +140,12 @@ overridable: false
 
 ## Шаг 2. Учти test_outcome
 
-Test outcome **не переопределяет** severity-решение, но влияет на reasoning:
+Test outcome обрабатывается **функциональным гейтом (Правило 0)** — FAILED не может дать ACCEPT.
+Помимо гейта, outcome влияет на reasoning остальных решений:
 
 | test_outcome | Эффект |
 |---|---|
-| `FAILED` | Добавить в reasoning: «Тестирование также выявило функциональные проблемы. Требуется доработка и повторное тестирование.» |
+| `FAILED` | Гейт Правила 0 уже понизил рекомендацию до REWORK. В reasoning добавить: «Тестирование выявило функциональные проблемы. Требуется доработка и повторное тестирование.» |
 | `PARTIAL` | Добавить в reasoning: «Тестирование выполнено частично. Непокрытые зоны: [перечислить]. Рекомендуется полное тестирование после доработки.» |
 | `PASSED` | При RECOMMEND REWORK: «Тесты пройдены, но инженерные проблемы (см. замечания) требуют исправления.» |
 
@@ -203,7 +224,8 @@ Team Lead должен учесть, что непокрытые зоны мог
 # Self-check
 
 - [ ] Recommendation prefix — всегда RECOMMEND (рекомендательный характер)
-- [ ] Decision rules применены в порядке 1→2→3→4→5
+- [ ] Функциональный гейт (Правило 0) проверен: FAILED/p0_failed → не ACCEPT
+- [ ] Decision rules применены в порядке 0→1→2→3→4→5
 - [ ] Test outcome учтён, но не переопределяет severity-решение
 - [ ] analysis_complete отражён в reasoning
 - [ ] Plateau indicators проверены

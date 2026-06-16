@@ -52,7 +52,7 @@ temperature: 0.1
 Для каждого найденного отклонения:
 - Опиши finding: файл, строка, что не так, evidence, потенциальное влияние
 - **Откалибруй уверенность:** для каждого finding с потенциальным severity ≥ SIGNIFICANT вызови `skill({ name: "confidence-calibrate" })`. Навык оценит твою уверенность в finding по 4 критериям (данные, сложность, альтернативы, контекст) и вернёт confidence 0–100%. Встрой confidence в запись finding (см. формат ниже).
-- Пропусти через `skill({ name: "guardian-severity" })` — получи объективный severity. При низкой confidence (< 50%) severity может быть скорректирован: CRITICAL с confidence 30% → SIGNIFICANT с пометкой «требует дорасследования».
+- Пропусти через `skill({ name: "guardian-severity" })` — получи объективный severity. **Confidence НЕ понижает severity:** severity отражает критичность последствий, confidence — твою уверенность в наличии проблемы; это ортогональные оси (см. `confidence-calibrate`). CRITICAL с confidence 30% остаётся CRITICAL, но с явной пометкой «низкая уверенность — требует дорасследования», чтобы Team Lead увидел слабо обоснованный, но потенциально критический сигнал, а не его смягчённую версию.
 - Запиши в guardian-NNN.md секцию «Замечания» сгруппировав по severity, каждое finding содержит confidence и краткое обоснование.
 
 # Post-analysis (классификация и вердикт)
@@ -64,7 +64,7 @@ temperature: 0.1
    ```
    skill({ name: "guardian-verdict" })
    ```
-   Передай severity_summary, findings, test_outcome, analysis_complete и plateau_indicators.
+   Передай severity_summary, findings, test_outcome, p0_failed (есть ли FAILED-тест с приоритетом P0 в TR-NNN.md), analysis_complete и plateau_indicators.
    Навык выдаст: RECOMMEND ACCEPT / RECOMMEND REWORK / RECOMMEND ESCALATE с reasoning.
 
 3. **Запиши финальный документ** — обнови guardian-NNN.md, включив verdict-блок от навыка.

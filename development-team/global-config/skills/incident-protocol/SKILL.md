@@ -56,6 +56,7 @@ compatibility: opencode
 ### Критические секции (для tester/guardian)
 
 Секция считается критической, если она затрагивает:
+- **P0-тесты (для tester): покрытие P0 < 100%** — даже при общем покрытии ≥80% незакрытые P0 делают результат INSUFFICIENT (P0 = 100% это жёсткий KPI Tester'а)
 - Безопасность (security issues из guardian-NNN.md)
 - API-контракты (интерфейсные тесты)
 - Зоны, помеченные как `affected_zones` в feedback.json
