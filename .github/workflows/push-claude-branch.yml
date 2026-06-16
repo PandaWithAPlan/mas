@@ -1,0 +1,101 @@
+name: Push Claude branch
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch name to create/push'
+        required: true
+        default: 'claude/loving-ptolemy-cj5az4'
+
+jobs:
+  push-branch:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git
+        run: |
+          git config user.email "noreply@anthropic.com"
+          git config user.name "Claude"
+
+      - name: Apply project-config template changes
+        run: |
+          git checkout -b ${{ github.event.inputs.branch }} || git checkout ${{ github.event.inputs.branch }}
+
+          cat > development-team/project-config/opencode.json << 'JSONEOF'
+{
+  "$schema": "https://opencode.ai/config.json",
+
+  "agent": {
+    "coder-front": {
+      "permission": {
+        "edit": {
+          "*": "deny"
+        }
+      }
+    },
+    "coder-back": {
+      "permission": {
+        "edit": {
+          "*": "deny"
+        }
+      }
+    }
+  },
+
+  "lsp": {
+    "python": {
+      "command": ["npx", "--yes", "--package=pyright", "--", "pyright-langserver", "--stdio"],
+      "extensions": [".py", ".pyi"],
+      "env": {
+        "PYRIGHT_PYTHON_FORCE_VERSION": "3.11"
+      },
+      "initialization": {
+        "settings": {
+          "python": {
+            "pythonPath": "/path/to/venv/bin/python",
+            "venvPath": "/path/to/project",
+            "venv": "venv_name"
+          }
+        }
+      }
+    },
+    "typescript": {
+      "command": ["npx", "--yes", "typescript-language-server", "--stdio"],
+      "extensions": [".ts", ".tsx", ".mts", ".cts"]
+    },
+    "javascript": {
+      "command": ["npx", "--yes", "typescript-language-server", "--stdio"],
+      "extensions": [".js", ".jsx", ".mjs", ".cjs"]
+    },
+    "yaml": {
+      "command": ["npx", "--yes", "yaml-language-server", "--stdio"],
+      "extensions": [".yaml", ".yml"]
+    },
+    "shellscript": {
+      "command": ["npx", "--yes", "bash-language-server", "start"],
+      "extensions": [".sh", ".bash"]
+    }
+  }
+}
+JSONEOF
+
+          git add development-team/project-config/opencode.json development-team/project-config/AGENTS.md
+          git diff --cached --quiet || git commit -m "refactor(project-config): replace real project specifics with adapter template
+
+Convert project-config/ from Odysseus-specific configuration to a
+reusable template. All agent logic, MALMAS rules, skill tables, artifact
+conventions, and DevOps Gate rules are preserved unchanged.
+
+https://claude.ai/code/session_01AJ9hkAZVSBzKwbZ1moaoAg"
+
+      - name: Push branch
+        run: git push -u origin ${{ github.event.inputs.branch }}
