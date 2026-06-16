@@ -1,0 +1,68 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "agent": {
+    "coder-front": {
+      "permission": {
+        "edit": {
+          "*": "deny",
+          "static/**": "allow"
+        }
+      }
+    },
+    "coder-back": {
+      "permission": {
+        "edit": {
+          "*": "deny",
+          "src/**": "allow",
+          "core/**": "allow",
+          "routes/**": "allow",
+          "services/**": "allow",
+          "companion/**": "allow",
+          "mcp_servers/**": "allow"
+        }
+      }
+    }
+  },
+  "lsp": {
+    "python": {
+      "command": ["npx", "--yes", "--package=pyright", "--", "pyright-langserver", "--stdio"],
+      "extensions": [".py", ".pyi"],
+      "env": {
+        "PYRIGHT_PYTHON_FORCE_VERSION": "3.11"
+      },
+      "initialization": {
+        "settings": {
+          "python": {
+            "pythonPath": "/opt/chat-oss/src/venv311/bin/python",
+            "venvPath": "/opt/chat-oss/src",
+            "venv": "venv311"
+          }
+        }
+      }
+    },
+    "typescript": {
+      "command": ["npx", "--yes", "typescript-language-server", "--stdio"],
+      "extensions": [".ts", ".tsx", ".mts", ".cts"]
+    },
+    "javascript": {
+      "command": ["npx", "--yes", "typescript-language-server", "--stdio"],
+      "extensions": [".js", ".jsx", ".mjs", ".cjs"]
+    },
+    "c": {
+      "command": ["/home/max/.cache/opencode/bin/clangd_22.1.0/bin/clangd"],
+      "extensions": [".c", ".h"]
+    },
+    "cpp": {
+      "command": ["/home/max/.cache/opencode/bin/clangd_22.1.0/bin/clangd"],
+      "extensions": [".cpp", ".cxx", ".cc", ".c++", ".hpp", ".hxx", ".hh", ".h++"]
+    },
+    "yaml": {
+      "command": ["npx", "--yes", "yaml-language-server", "--stdio"],
+      "extensions": [".yaml", ".yml"]
+    },
+    "shellscript": {
+      "command": ["npx", "--yes", "bash-language-server", "start"],
+      "extensions": [".sh", ".bash"]
+    }
+  }
+}

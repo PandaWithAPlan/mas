@@ -1,0 +1,217 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "autoshare": false,
+
+  "permission": {
+    "read": {
+      "*": "allow",
+      "**/.env": "deny",
+      "**/.env.*": "deny",
+      "**/*.key": "deny",
+      "**/*.pem": "deny",
+      "**/id_rsa*": "deny",
+      "**/*.secret": "deny",
+      "**/secrets/**": "deny",
+      "**/.aws/**": "deny",
+      "**/.ssh/**": "deny"
+    },
+    "external_directory": "deny"
+  },
+
+  "agent": {
+    "team-lead": {
+      "model": "ollama-cloud/nemotron-3-ultra",
+      "permission": {
+        "edit": {
+          "*": "deny",
+          "work-area/sessions/**": "allow",
+          "work-area/tasks/**": "allow",
+          "work-area/memory/**": "allow"
+        },
+        "bash": "deny",
+        "webfetch": "deny"
+      }
+    },
+
+    "explorer": {
+      "model": "ollama-cloud/deepseek-v4-flash",
+      "permission": {
+        "edit": {
+          "*": "deny",
+          "work-area/docs/explore-report.md": "allow"
+        },
+        "bash": "deny",
+        "webfetch": "deny"
+      }
+    },
+
+    "analyst": {
+      "model": "ollama-cloud/qwen3.5:397b",
+      "permission": {
+        "edit": {
+          "*": "deny",
+          "work-area/docs/requirements.md": "allow"
+        },
+        "bash": "deny",
+        "webfetch": "deny"
+      }
+    },
+
+    "architect": {
+      "model": "ollama-cloud/deepseek-v4-pro",
+      "permission": {
+        "edit": {
+          "*": "deny",
+          "work-area/docs/design.md": "allow"
+        },
+        "bash": "deny",
+        "webfetch": "deny"
+      }
+    },
+
+    "coder-front": {
+      "model": "ollama-cloud/kimi-k2.7-code",
+      "permission": {
+        "edit": {
+          "*": "deny"
+        },
+        "bash": {
+          "*": "allow",
+          "rm -rf*": "deny",
+          "sudo*": "deny",
+          "chmod 777*": "deny",
+          "git push*": "deny",
+          "git commit*": "ask",
+          "curl*": "deny",
+          "wget*": "deny",
+          "ssh*": "deny",
+          "nc *": "deny"
+        },
+        "webfetch": "deny"
+      }
+    },
+
+    "coder-back": {
+      "model": "ollama-cloud/kimi-k2.7-code",
+      "permission": {
+        "edit": {
+          "*": "deny"
+        },
+        "bash": {
+          "*": "allow",
+          "rm -rf*": "deny",
+          "sudo*": "deny",
+          "chmod 777*": "deny",
+          "git push*": "deny",
+          "git commit*": "ask",
+          "curl*": "deny",
+          "wget*": "deny",
+          "ssh*": "deny",
+          "nc *": "deny"
+        },
+        "webfetch": "deny"
+      }
+    },
+
+    "tester": {
+      "model": "ollama-cloud/glm-5.1",
+      "permission": {
+        "edit": {
+          "*": "deny",
+          "work-area/reports/test-results/**": "allow",
+          "tests/**": "allow"
+        },
+        "bash": {
+          "*": "allow",
+          "rm -rf*": "deny",
+          "sudo*": "deny",
+          "chmod 777*": "deny",
+          "git push*": "deny",
+          "git commit*": "deny",
+          "curl*": "deny",
+          "wget*": "deny",
+          "ssh*": "deny",
+          "nc *": "deny"
+        },
+        "webfetch": "deny"
+      }
+    },
+
+    "guardian": {
+      "model": "ollama-cloud/minimax-m3",
+      "permission": {
+        "edit": {
+          "*": "deny",
+          "work-area/reports/guardian-*.md": "allow"
+        },
+        "bash": {
+          "*": "allow",
+          "rm -rf*": "deny",
+          "sudo*": "deny",
+          "chmod 777*": "deny",
+          "git push*": "deny",
+          "git commit*": "deny",
+          "curl*": "deny",
+          "wget*": "deny",
+          "ssh*": "deny",
+          "nc *": "deny"
+        },
+        "webfetch": "deny"
+      }
+    },
+
+    "devops": {
+      "model": "ollama-cloud/gemini-3-flash-preview",
+      "permission": {
+        "read": {
+          "**/.env": "allow",
+          "**/.env.*": "allow"
+        },
+        "edit": {
+          "*": "deny",
+          "work-area/reports/devops-status.md": "allow",
+          "docker-compose.yml": "allow",
+          "docker-compose.*.yml": "allow",
+          "nginx.conf": "allow",
+          "Makefile": "allow",
+          ".env": "allow",
+          ".env.*": "allow"
+        },
+        "bash": {
+          "*": "allow",
+          "rm -rf*": "deny",
+          "sudo*": "ask",
+          "chmod 777*": "deny",
+          "git push*": "deny",
+          "git commit*": "deny",
+          "curl*": "deny",
+          "wget*": "deny",
+          "ssh*": "deny",
+          "nc *": "deny"
+        },
+        "webfetch": "deny"
+      }
+    },
+
+    "reviewer": {
+      "model": "ollama-cloud/minimax-m2.7",
+      "permission": {
+        "edit": {
+          "*": "deny",
+          "work-area/reports/final-report-*.md": "allow"
+        },
+        "bash": "deny",
+        "webfetch": "deny"
+      }
+    },
+
+    "ai-engineer": {
+      "model": "ollama-cloud/deepseek-v4-pro",
+      "permission": {
+        "edit": "ask",
+        "bash": "ask",
+        "webfetch": "ask"
+      }
+    }
+  }
+}
