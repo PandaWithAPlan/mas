@@ -1,68 +1,125 @@
 {
   "$schema": "https://opencode.ai/config.json",
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // ШАБЛОН: project-config/opencode.json
+  //
+  // Этот файл переопределяет только то, что специфично для конкретного проекта.
+  // Глобальные права агентов, модели, deny-листы bash и глобальные
+  // предохранители секретов задаются в global-config/opencode.json
+  // и действуют для всех агентов автоматически.
+  //
+  // ЧТО НУЖНО ЗАПОЛНИТЬ ПРИ АДАПТАЦИИ:
+  //   1. agent.coder-front.permission.edit — директории фронтенда проекта
+  //   2. agent.coder-back.permission.edit  — директории бэкенда проекта
+  //   3. lsp                               — только нужные языки; удалить лишние
+  //   4. lsp.*.initialization.pythonPath   — реальный путь к venv (или удалить
+  //                                          блок initialization, если venv не нужен)
+  // ─────────────────────────────────────────────────────────────────────────
+
   "agent": {
+
+    // ── coder-front ──────────────────────────────────────────────────────
+    // Укажи директории фронтенда. Формат: "путь/**": "allow"
+    // Примеры: "static/**", "frontend/**", "client/src/**", "public/**"
+    // Правило "*": "deny" обязательно — не удалять.
     "coder-front": {
       "permission": {
         "edit": {
-          "*": "deny",
-          "static/**": "allow"
+          "*": "deny"
+          // "FRONTEND_DIR/**": "allow"
         }
       }
     },
+
+    // ── coder-back ───────────────────────────────────────────────────────
+    // Укажи директории бэкенда. Можно указать несколько.
+    // Примеры: "src/**", "app/**", "api/**", "services/**", "core/**"
+    // Правило "*": "deny" обязательно — не удалять.
     "coder-back": {
       "permission": {
         "edit": {
-          "*": "deny",
-          "src/**": "allow",
-          "core/**": "allow",
-          "routes/**": "allow",
-          "services/**": "allow",
-          "companion/**": "allow",
-          "mcp_servers/**": "allow"
+          "*": "deny"
+          // "BACKEND_DIR/**": "allow"
         }
       }
     }
+
   },
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // LSP-серверы
+  //
+  // Оставь только языки, реально используемые в проекте.
+  // Для Python: заполни pythonPath / venvPath / venv под своё окружение,
+  // или удели блок "initialization" если venv не нужен.
+  // ─────────────────────────────────────────────────────────────────────────
   "lsp": {
+
+    // ── Python ───────────────────────────────────────────────────────────
+    // Удали если проект не использует Python.
     "python": {
       "command": ["npx", "--yes", "--package=pyright", "--", "pyright-langserver", "--stdio"],
       "extensions": [".py", ".pyi"],
       "env": {
+        // Укажи версию Python проекта (3.10, 3.11, 3.12, ...)
         "PYRIGHT_PYTHON_FORCE_VERSION": "3.11"
       },
       "initialization": {
         "settings": {
           "python": {
-            "pythonPath": "/opt/chat-oss/src/venv311/bin/python",
-            "venvPath": "/opt/chat-oss/src",
-            "venv": "venv311"
+            // Замени на реальный путь к интерпретатору venv.
+            // Если venv не используется — удали блок "initialization" целиком.
+            "pythonPath": "/path/to/venv/bin/python",
+            "venvPath": "/path/to/project",
+            "venv": "venv_name"
           }
         }
       }
     },
+
+    // ── TypeScript ────────────────────────────────────────────────────────
+    // Удали если проект не использует TypeScript.
     "typescript": {
       "command": ["npx", "--yes", "typescript-language-server", "--stdio"],
       "extensions": [".ts", ".tsx", ".mts", ".cts"]
     },
+
+    // ── JavaScript ────────────────────────────────────────────────────────
+    // Удали если проект не использует JavaScript.
     "javascript": {
       "command": ["npx", "--yes", "typescript-language-server", "--stdio"],
       "extensions": [".js", ".jsx", ".mjs", ".cjs"]
     },
+
+    // ── C ─────────────────────────────────────────────────────────────────
+    // Удали если проект не использует C.
+    // Замени путь к clangd на актуальный для системы.
     "c": {
-      "command": ["/home/max/.cache/opencode/bin/clangd_22.1.0/bin/clangd"],
+      "command": ["/path/to/clangd"],
       "extensions": [".c", ".h"]
     },
+
+    // ── C++ ───────────────────────────────────────────────────────────────
+    // Удали если проект не использует C++.
     "cpp": {
-      "command": ["/home/max/.cache/opencode/bin/clangd_22.1.0/bin/clangd"],
+      "command": ["/path/to/clangd"],
       "extensions": [".cpp", ".cxx", ".cc", ".c++", ".hpp", ".hxx", ".hh", ".h++"]
     },
+
+    // ── YAML ──────────────────────────────────────────────────────────────
+    // Удали если не нужен (например, нет Docker Compose / CI конфигов).
     "yaml": {
       "command": ["npx", "--yes", "yaml-language-server", "--stdio"],
       "extensions": [".yaml", ".yml"]
     },
+
+    // ── Shell ─────────────────────────────────────────────────────────────
+    // Удали если проект не содержит shell-скриптов.
     "shellscript": {
       "command": ["npx", "--yes", "bash-language-server", "start"],
       "extensions": [".sh", ".bash"]
     }
+
   }
 }
