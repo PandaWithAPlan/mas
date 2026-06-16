@@ -5,6 +5,23 @@ Format: [MAJOR.MINOR.PATCH] — YYYY-MM-DD
 
 ---
 
+## [1.2.0] — 2026-06-16
+
+### Changed
+- Documentation skills reworked to stop proliferation of duplicate docs files.
+  Root cause: `[module-name]` had no deterministic generation rule, so each run
+  invented a new filename and created a new doc instead of updating the existing one.
+  - `doc-update-module` — introduced deterministic `canonical_path` rule
+    (source path → `docs/<path-with-dashes>.md`), mandatory existence check before
+    create, explicit ban on creating a second doc for the same source file
+  - `doc-scan-rules` — now emits a "Индекс документации" table (source → canonical_path
+    → status) so coders look up the name instead of guessing; added duplicate detection
+  - `doc-update-arch` — explicit single-file rule for `full-project-architecture-note.md`,
+    ban on creating a second architecture file
+  - `doc-consistency-check` — added duplicate/orphan detection as BLOCKER (step 0)
+
+---
+
 ## [1.1.0] — 2026-06-16
 
 ### Changed
