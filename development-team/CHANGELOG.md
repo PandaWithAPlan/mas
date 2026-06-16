@@ -5,6 +5,20 @@ Format: [MAJOR.MINOR.PATCH] — YYYY-MM-DD
 
 ---
 
+## [1.3.0] — 2026-06-16
+
+### Added
+- Documentation-debt handling for pre-existing undocumented modules not touched
+  by the current task (previously such modules stayed undocumented indefinitely
+  with no rule obliging Team Lead to close the gap).
+  - `doc-scan-rules` — each gap now gets a deterministic priority (HIGH/MED/LOW)
+    based on coupling and critical zone; priority surfaced in the doc index table
+  - `team-lead.md` — new "Документационный долг" rule with deterministic thresholds:
+    HIGH gap → dedicated doc-task this cycle; 3+ MED in task zones → one doc-task;
+    isolated LOW/MED → deferred and logged in session (no scope bloat)
+
+---
+
 ## [1.2.0] — 2026-06-16
 
 ### Changed
