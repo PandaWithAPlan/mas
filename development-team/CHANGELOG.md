@@ -5,6 +5,28 @@ Format: [MAJOR.MINOR.PATCH] — YYYY-MM-DD
 
 ---
 
+## [1.3.1] — 2026-06-16
+
+### Fixed
+- `CHECKLIST.md` drifted from the actual `project-config/AGENTS.md` template and configs;
+  realigned end-to-end:
+  - Step 1 — copy path corrected to project **root** (`./opencode.json`, `./AGENTS.md`)
+    instead of nesting under `.opencode/project-config/`
+  - Step 3 — section names and `[ЗАПОЛНИТЬ]` markers now match the real template
+    («Назначение директорий», «Технологический стек и ключевые подсистемы»,
+    «Ключевые внешние зависимости», «Зоны ответственности», «Применение глобального процесса»)
+  - Step 4 — test-results path corrected to `work-area/reports/test-results/`; added
+    creation of `work-area/docs/` and `work-area/reports/`; added `metrics.json` init
+  - Step 5 — clarified JSONC validation for the project config; added the critical
+    coder-permission-merge verification step
+  - checklist version bumped to 1.3.1 (was stale at 1.1.0)
+- `README.md` — security-model section now accurately describes `sudo` (deny for all
+  executors except `devops` = ask) and `git commit` handling (coders = ask,
+  tester/guardian/devops = deny); post-install JSON-validation note distinguishes
+  strict JSON (global) from JSONC (project).
+
+---
+
 ## [1.3.0] — 2026-06-16
 
 ### Added
