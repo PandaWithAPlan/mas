@@ -43,8 +43,8 @@ agents_used: {
   explorer: {calls: N, status: "DONE" | "PARTIAL" | "FAILED"},
   analyst: {calls: N, status: "DONE" | "PARTIAL" | "FAILED"},
   architect: {calls: N, status: "DONE" | "PARTIAL" | "FAILED"},
-  coder_front: {calls: N, files_changed: N, status: "DONE" | "PARTIAL" | "BLOCKED"} | null,
-  coder_back: {calls: N, files_changed: N, status: "DONE" | "PARTIAL" | "BLOCKED"} | null,
+  coder-front: {calls: N, files_changed: N, status: "DONE" | "PARTIAL" | "BLOCKED"} | null,
+  coder-back: {calls: N, files_changed: N, status: "DONE" | "PARTIAL" | "BLOCKED"} | null,
   tester: {calls: N, tests_run: N, status: "DONE" | "PARTIAL" | "FAILED"},
   guardian: {calls: N, verdicts: ["REWORK" | "ACCEPT" | "ESCALATE", ...], status: "DONE"},
   devops: {calls: N, status: "DONE" | "PARTIAL"} | null
@@ -102,7 +102,7 @@ completed: "ISO timestamp"     // текущее время закрытия
 | `final_status` | `"ACCEPTED"` или `"ESCALATED"` |
 | `agents_used.[agent].calls` | Сколько раз агент был запущен за всю задачу |
 | `agents_used.[agent].status` | Финальный статус последнего запуска агента |
-| `coder_*.files_changed` | Суммарное количество изменённых файлов за все циклы |
+| `coder-*.files_changed` | Суммарное количество изменённых файлов за все циклы |
 | `tester.tests_run` | Суммарное количество выполненных тест-кейсов за все циклы |
 | `guardian.verdicts` | Массив всех вердиктов Guardian по циклам |
 | `rework_triggers` | Причины каждого REWORK-цикла, одна запись на триггер |
@@ -114,7 +114,10 @@ completed: "ISO timestamp"     // текущее время закрытия
 ### Null-поля
 
 Если агент не использовался в задаче — **не включай его** в `agents_used`.
-Например, если задача чисто бэкендовая, `coder_front` отсутствует в объекте.
+Например, если задача чисто бэкендовая, `coder-front` отсутствует в объекте.
+
+Ключи агентов в `agents_used` всегда совпадают с `agent_id` из opencode.json
+(через дефис: `coder-front`, `coder-back`), а не через подчёркивание.
 
 Если `estimated_tokens` не указан — поставь `null`.
 

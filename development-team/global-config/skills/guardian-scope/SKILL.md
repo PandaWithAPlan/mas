@@ -42,13 +42,15 @@ is_partial_tested: boolean                 // TR-NNN.md PARTIAL COMPLETION?
 
 Фиксированный приоритет (от наиболее критичного к наименее):
 
-| Порядок | Зона | Почему первый |
-|---------|------|---------------|
+| Порядок | Зона | Почему в этом месте |
+|---------|------|---------------------|
 | 1 | **Security** | BLOCKER/CRITICAL — могут требовать немедленной остановки |
 | 2 | **Correctness** | Несоответствие design.md/контрактам — системная ошибка |
-| 3 | **Code Quality** | Влияет на maintainability, но не ломает продукт |
-| 4 | **Test Analysis** | Оценка результатов Tester — на основе уже собранных данных |
+| 3 | **Test Analysis** | Дёшев (работает на уже собранных данных TR-NNN.md) и питает correctness; FAILED P0 здесь становится CRITICAL — критично не пропустить под context-лимитом |
+| 4 | **Code Quality** | Влияет на maintainability, но не ломает продукт |
 | 5 | **Tech Debt** | Долгосрочные риски — наименее срочно |
+
+> Порядок совпадает с `guardian.md` (Execution): security → correctness → test_analysis → code_quality → tech_debt.
 
 ## Шаг 2. Усиль зоны на основе памяти
 
@@ -68,8 +70,9 @@ is_partial_tested: boolean                 // TR-NNN.md PARTIAL COMPLETION?
 
 ### Если is_partial_tested === true
 
-Test Analysis становится приоритетом 3 (сразу после Correctness):
+Test Analysis (уже приоритет 3 по умолчанию) помечается `enhanced` и анализируется с удвоенной тщательностью:
 - Критически важно оценить: покрыл ли частичный тест зоны, где могут быть инженерные проблемы
+- При нехватке контекста Test Analysis НЕ отбрасывается раньше code_quality/tech_debt
 
 ## Шаг 3. Сформируй план анализа
 
@@ -91,7 +94,7 @@ Test Analysis становится приоритетом 3 (сразу посл
 1. **Security first:** проверить каждый файл диффа на все пункты BLOCKER-матрицы.
    При обнаружении BLOCKER — немедленно остановить анализ, вердикт REWORK.
 2. **Correctness:** сверить реализацию с design.md, проверить контракты, проверить scope.
-3. **Test Analysis:** оценить TR-NNN.md — нет ли скрытых проблем в наблюдениях.
+3. **Test Analysis:** оценить TR-NNN.md — провалы (FAILED P0 → CRITICAL), скрытые проблемы в наблюдениях.
 4. **Code Quality:** если контекст позволяет — соглашения, сложность, документация.
 5. **Tech Debt:** только при достаточном контексте после всех предыдущих зон.
 
@@ -115,7 +118,7 @@ Test Analysis становится приоритетом 3 (сразу посл
       {priority: 3, zone: "test_analysis", enhanced: true, reason: "is_partial_tested"},
       {priority: 4, zone: "code_quality", enhanced: false},
       {priority: 5, zone: "tech_debt", enhanced: false}
-    ],
+    ],   // порядок зон фиксирован: security → correctness → test_analysis → code_quality → tech_debt
     files_priority: ["src/backend/auth/login.py", "src/backend/auth/oauth.py", ...],
     stop_on_blocker: true,
     strategy: "Выполнять зоны по порядку. При обнаружении BLOCKER в security — немедленно STOP_PARTIAL с REWORK."
