@@ -36,8 +36,8 @@ temperature: 0.1
    ```
    skill({ name: "guardian-scope" })
    ```
-   Навык учтёт affected zones и историю критических замечаний,
-   выдаст приоритизированный план: security → correctness → test_analysis → code_quality → tech_debt.
+   Навык учтёт affected zones и историю критических замечаний;
+   по его процедуре ты сам формируешь приоритизированный план: security → correctness → test_analysis → code_quality → tech_debt.
 
 # Execution (анализ по плану)
 
@@ -51,7 +51,7 @@ temperature: 0.1
 
 Для каждого найденного отклонения:
 - Опиши finding: файл, строка, что не так, evidence, потенциальное влияние
-- **Откалибруй уверенность:** для каждого finding с потенциальным severity ≥ SIGNIFICANT вызови `skill({ name: "confidence-calibrate" })`. Навык оценит твою уверенность в finding по 4 критериям (данные, сложность, альтернативы, контекст) и вернёт confidence 0–100%. Встрой confidence в запись finding (см. формат ниже).
+- **Откалибруй уверенность:** для каждого finding с потенциальным severity ≥ SIGNIFICANT вызови `skill({ name: "confidence-calibrate" })`. По процедуре навыка сам оцени свою уверенность в finding по 4 критериям (данные, сложность, альтернативы, контекст) и определи confidence 0–100%. Встрой confidence в запись finding (см. формат ниже).
 - Пропусти через `skill({ name: "guardian-severity" })` — получи объективный severity. **Confidence НЕ понижает severity:** severity отражает критичность последствий, confidence — твою уверенность в наличии проблемы; это ортогональные оси (см. `confidence-calibrate`). CRITICAL с confidence 30% остаётся CRITICAL, но с явной пометкой «низкая уверенность — требует дорасследования», чтобы Team Lead увидел слабо обоснованный, но потенциально критический сигнал, а не его смягчённую версию.
 - Запиши в guardian-NNN.md секцию «Замечания» сгруппировав по severity, каждое finding содержит confidence и краткое обоснование.
 
@@ -64,8 +64,7 @@ temperature: 0.1
    ```
    skill({ name: "guardian-verdict" })
    ```
-   Передай severity_summary, findings, test_outcome, p0_failed (есть ли FAILED-тест с приоритетом P0 в TR-NNN.md), analysis_complete и plateau_indicators.
-   Навык выдаст: RECOMMEND ACCEPT / RECOMMEND REWORK / RECOMMEND ESCALATE с reasoning.
+   По процедуре навыка собери severity_summary, findings, test_outcome, p0_failed (есть ли FAILED-тест с приоритетом P0 в TR-NNN.md), analysis_complete и plateau_indicators (эти данные у тебя уже есть) и сам вынеси вердикт: RECOMMEND ACCEPT / RECOMMEND REWORK / RECOMMEND ESCALATE с reasoning.
 
 3. **Запиши финальный документ** — обнови guardian-NNN.md, включив verdict-блок от навыка.
 
