@@ -96,6 +96,7 @@ Three-layer project memory, updated by Team Lead via `memory-update` → `memory
 - Tester and Guardian use `feedback.json` from prior cycles to expand check scope (affected zones).
 - **Objective anchor (WI-1):** Tester always runs the fixed baseline set (`work-area/memory/baseline/manifest.json`) every cycle, independent of Router/heuristics. Each test record in `feedback.json` carries `source: "baseline" | "scoped"`. Heuristics are validated **only** against baseline results (scoped is what the heuristic itself dictated). Baseline is never disabled by scope reduction or ε-exploration.
 - Heuristics in `conceptual.json` that are disproven by baseline get demoted to `archived` (WI-3).
+- **ε-exploration (WI-5):** with small probability `ε` (`exploration.epsilon`) Team Lead routes as if the chosen `active` heuristic were false — i.e. skips its discretionary scope expansion — and records the outcome as counter-evidence into `confirm_count`/`refute_count`. ε never disables baseline, P0 tests, or non-overridable gates (BLOCKER / P0 FAILED).
 
 # Team Lead Quick Reference
 

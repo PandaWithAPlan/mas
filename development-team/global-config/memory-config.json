@@ -30,5 +30,10 @@
     "demote_refute_K": 2,
     "merge_allowed": false,
     "active_requires_falsification": true
+  },
+
+  "exploration": {
+    "_comment": "WI-5: ε-разведка в Router (team-lead), чтобы политика могла себя опровергнуть. С вероятностью epsilon Router НЕ применяет дискреционное расширение scope, продиктованное выбранной active-эвристикой (маршрутизирует как будто она ложна), а исход записывает контр-свидетельством в confirm_count/refute_count. ВАРЬИРУЕТСЯ ТОЛЬКО дискреционный scope: baseline (WI-1), P0-тесты и непереопределяемые гейты (BLOCKER/P0 FAILED) разведка не трогает НИКОГДА.",
+    "epsilon": 0.1
   }
 }
