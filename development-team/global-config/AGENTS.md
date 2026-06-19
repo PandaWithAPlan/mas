@@ -87,6 +87,33 @@ Three-layer project memory, updated by Team Lead via `memory-update` → `memory
 
 **Versioning & audit (WI-6):** every `memory-update` writes an append-only snapshot to `work-area/memory/snapshots/cycle-NNN-.../` and one line per mutation to `work-area/memory/changelog.jsonl` (what was added/promoted/demoted/archived and the deterministic rule + reason). This enables diffing memory between any two cycles and rollback to a known-good state. Numeric thresholds and modes for the whole memory subsystem live in `memory-config.json` (a standalone file, not part of the opencode schema).
 
+# MALMAS: attribution & domain adaptations (WI-9)
+
+**Attribution.** MALMAS = **Dong et al., 2026** (arXiv:2604.20261, *Memory-Augmented
+LLM-based Multi-Agent System for Automated Feature Generation on Tabular Data*). Earlier
+docs miscited it as "Zhang et al., 2024" — that is the *golden-features* work MALMAS
+*references*, not MALMAS itself. Cite Zhang et al., 2024 only for golden-feature
+categorization, never for MALMAS.
+
+**What is ported exactly vs adapted.** MALMAS optimizes *diversity* (exploration of
+dissimilar features as an end in itself, closed-loop on an objective validation-utility
+sensor). Software development optimizes *correctness* (one right solution). Hence:
+
+| Mechanism | Status | Note |
+|---|---|---|
+| Three-layer memory (Proc/Feed/Con) + GlobalMem | ported | `ConMem = LLM(ProcMem, FeedMem)` |
+| Router selecting an agent subset per cycle | ported | team-lead Routing Intelligence |
+| Stateless ConMem derivation | ported (canon) | `recompact` mode (WI-4) |
+| Iterative `incremental` window | **adapted** | deliberate cost-saving deviation, not canon (WI-4/WI-9) |
+| Objective anchor = fixed baseline | **adapted** | replaces MALMAS's validation-utility sensor, which has no domain analog (WI-1) |
+| ε-exploration | **adapted** | here it lets policy *falsify* itself (correctness), not maximize diversity (WI-5) |
+| Tiers + falsification + no-merge | **adapted** | guards against self-confirming heuristics specific to LLM-judge feedback (WI-3) |
+
+The root cause these adaptations address: in the original domain the correction loop is
+closed by an unfakeable metric; ported naively to software dev the loop opens (tester/guardian
+verdicts are themselves LLM judgments scoped by the same heuristic-driven Router). WI-1
+(baseline anchor) + WI-5 (exploration) re-close the loop; the rest serves or cleans up after them.
+
 # MALMAS Rules
 
 - **Every agent** calls `skill({ name: "memory-retrieve" })` as their first action upon receiving a task.

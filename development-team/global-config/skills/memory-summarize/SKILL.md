@@ -1,6 +1,6 @@
 ---
 name: memory-summarize
-description: MALMAS Summary-Agent: сжатие ProcMem + FeedMem → ConMem (conceptual.md) + GlobalMem (global-memory.md) через LLM
+description: MALMAS Summary-Agent: сжатие ProcMem + FeedMem → ConMem (conceptual.json → conceptual.md) + GlobalMem (global-memory.md) через LLM
 license: MIT
 compatibility: opencode
 ---
@@ -8,9 +8,15 @@ compatibility: opencode
 > ⚙️ **Это навык-инструкция, а не функция.** Вызов `skill({ name: "memory-summarize" })` один раз подгружает этот текст в твой контекст — у навыка нет отдельного исполнения, входных аргументов и возвращаемого значения. Прочитав процедуру, выполни её сам и встрой результат прямо в свой ответ или артефакт. Повторный вызов ради получения вывода — ошибка: ты снова получишь этот же текст.
 
 Применяй после завершения Guardian в каждом цикле, **перед** финальной записью
-в conceptual.md и global-memory.md. Навык заменяет ручное написание эвристик
-автоматическим сжатием через LLM — как предписано MALMAS-паттерном (Section 4.2.3):
-`ConMem = LLM(ProcMem, FeedMem)`.
+в conceptual.json (→ conceptual.md) и global-memory.md. Навык заменяет ручное
+написание эвристик автоматическим сжатием через LLM — как предписано MALMAS-паттерном
+(Dong et al., 2026, arXiv:2604.20261, Section 4.2.3): `ConMem = LLM(ProcMem, FeedMem)`.
+
+> **Согласованность формулы (WI-9).** Канонической деривацией считается **stateless**-проход
+> `ConMem = LLM(ProcMem, FeedMem)` — он реализован режимом `recompact` (WI-4). Режим
+> `incremental` (подача `existing_conceptual` на вход внутри окна `window_N`) —
+> **сознательное ограниченное отклонение** ради экономии вычислений, а не канон; дрейф,
+> который оно может накопить, периодически сбрасывается stateless-рекомпакцией.
 
 # Кто использует
 
@@ -20,7 +26,7 @@ compatibility: opencode
 
 # Концепция
 
-В MALMAS-паттерне (Zhang et al., 2024) Summary-Agent выполняет три функции:
+В MALMAS-паттерне (Dong et al., 2026, arXiv:2604.20261) Summary-Agent выполняет три функции:
 1. **Сжатие:** ProcMem (сырая хронология) + FeedMem (результаты тестов и вердикты) → ConMem (сжатые эвристики)
 2. **Агрегация:** per-agent ConMem + FeedMem → GlobalMem (общий контекст для всех агентов)
 3. **Cross-agent knowledge transfer:** эвристики одного агента становятся доступны другим через GlobalMem
