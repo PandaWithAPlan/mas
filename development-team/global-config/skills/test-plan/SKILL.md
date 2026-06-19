@@ -42,7 +42,22 @@ explore_zones_of_risk: [                     // из explore-report.md, секц
   "src/backend/auth/",
   "src/frontend/components/Checkout/"
 ]
+baseline_manifest: {                         // из work-area/memory/baseline/manifest.json (WI-1)
+  test_ids: ["BASE-001", "BASE-002", ...]    // фиксированный регрессионный якорь
+}
 ```
+
+## Шаг 0.5. Включи baseline-якорь (WI-1)
+
+Перед приоритизацией добавь в план **все** тесты из `baseline_manifest.test_ids`,
+если они ещё не входят в TEST-NNN.md. Жёсткие правила:
+
+- baseline-тесты включаются в план **всегда**, даже если scoped-набор пуст и ни одна
+  эвристика/affected zone не сработала. Это объективный якорь, не зависящий от Router.
+- Каждому baseline-тесту присвой `source: "baseline"` и приоритет **P0** (он не может
+  быть понижен или вытеснен). Остальным тестам — `source: "scoped"`.
+- baseline **не подлежит** сокращению при SCOPE_REDUCE/STOP_PARTIAL и не отключается
+  ε-разведкой (WI-5). При нехватке контекста сначала режется scoped-P2, baseline — последним.
 
 ## Шаг 1. Извлеки тест-кейсы из TEST-NNN.md
 
@@ -147,7 +162,8 @@ explore_zones_of_risk: [                     // из explore-report.md, секц
 # Self-check
 
 - [ ] TEST-NNN.md прочитан, все тест-кейсы извлечены
-- [ ] Каждый тест имеет приоритет (P0/P1/P2) с обоснованием
+- [ ] baseline-тесты из манифеста включены в план как P0, помечены source:"baseline" (WI-1)
+- [ ] Каждый тест имеет приоритет (P0/P1/P2) с обоснованием и source (baseline/scoped)
 - [ ] Affected zones из feedback.json учтены (если есть)
 - [ ] Предыдущие FAILED тесты помечены как P0
 - [ ] План упорядочен: P0 → P1 → P2

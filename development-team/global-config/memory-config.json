@@ -1,0 +1,48 @@
+{
+  "_comment": "Параметры подсистемы памяти (MALMAS). Источник истины по числовым порогам и режимам памяти. Читается навыками memory-* и линтерами skills/check-memory-*.sh. НЕ является частью схемы opencode.json — это отдельный конфиг, чтобы не ломать строгую валидацию opencode. Изменяя значения здесь, ты меняешь поведение памяти во всех навыках сразу.",
+  "_attribution": "MALMAS: Dong et al., 2026 (arXiv:2604.20261). См. WI-9 и раздел Memory в AGENTS.md.",
+
+  "versioning": {
+    "_comment": "WI-6: версионирование и журнал мутаций памяти.",
+    "snapshots_dir": "work-area/memory/snapshots",
+    "changelog": "work-area/memory/changelog.jsonl",
+    "snapshot_retention": 20,
+    "snapshot_targets": [
+      "conceptual.json",
+      "conceptual.md",
+      "global-memory.md",
+      "feedback.json",
+      "procedural.json"
+    ]
+  },
+
+  "baseline": {
+    "_comment": "WI-1: объективный якорь. Стабильный регрессионный набор, который tester прогоняет КАЖДЫЙ цикл независимо от Router/эвристик. Только baseline-результаты валидируют эвристики (scoped игнорируются — их сформировала сама эвристика).",
+    "manifest": "work-area/memory/baseline/manifest.json",
+    "always_run": true,
+    "validation_window_cycles": 5
+  },
+
+  "tiers": {
+    "_comment": "WI-3: ярусность вместо слияния. active управляет routing; provisional даёт мягкие хинты, не меняет routing; archived хранится с provenance. Кап действует ТОЛЬКО на active. Переходы детерминированы по baseline-счётчикам (WI-1), без 'на усмотрение LLM'. Слияние эвристик запрещено.",
+    "active_cap": 10,
+    "promote_confirm_M": 2,
+    "demote_refute_K": 2,
+    "merge_allowed": false,
+    "active_requires_falsification": true
+  },
+
+  "exploration": {
+    "_comment": "WI-5: ε-разведка в Router (team-lead), чтобы политика могла себя опровергнуть. С вероятностью epsilon Router НЕ применяет дискреционное расширение scope, продиктованное выбранной active-эвристикой (маршрутизирует как будто она ложна), а исход записывает контр-свидетельством в confirm_count/refute_count. ВАРЬИРУЕТСЯ ТОЛЬКО дискреционный scope: baseline (WI-1), P0-тесты и непереопределяемые гейты (BLOCKER/P0 FAILED) разведка не трогает НИКОГДА.",
+    "epsilon": 0.1
+  },
+
+  "recompaction": {
+    "_comment": "WI-4: разрыв итерации. Внутри окна window_N циклов допустимы дешёвые итеративные обновления. Раз в window_N циклов (или по drift_trigger) выполняется stateless-рекомпакция: conceptual.json выводится с нуля ТОЛЬКО из procedural.json + feedback.json, без подачи предыдущего conceptual на вход (буквально ConMem = LLM(ProcMem, FeedMem)). Канон после WI-4 — stateless-проход; итеративное окно — сознательное ограниченное отклонение (см. WI-9).",
+    "window_N": 5,
+    "drift_trigger": {
+      "active_delta_threshold": 5,
+      "refute_streak": 3
+    }
+  }
+}
