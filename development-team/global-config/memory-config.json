@@ -1,0 +1,18 @@
+{
+  "_comment": "Параметры подсистемы памяти (MALMAS). Источник истины по числовым порогам и режимам памяти. Читается навыками memory-* и линтерами skills/check-memory-*.sh. НЕ является частью схемы opencode.json — это отдельный конфиг, чтобы не ломать строгую валидацию opencode. Изменяя значения здесь, ты меняешь поведение памяти во всех навыках сразу.",
+  "_attribution": "MALMAS: Dong et al., 2026 (arXiv:2604.20261). См. WI-9 и раздел Memory в AGENTS.md.",
+
+  "versioning": {
+    "_comment": "WI-6: версионирование и журнал мутаций памяти.",
+    "snapshots_dir": "work-area/memory/snapshots",
+    "changelog": "work-area/memory/changelog.jsonl",
+    "snapshot_retention": 20,
+    "snapshot_targets": [
+      "conceptual.json",
+      "conceptual.md",
+      "global-memory.md",
+      "feedback.json",
+      "procedural.json"
+    ]
+  }
+}
