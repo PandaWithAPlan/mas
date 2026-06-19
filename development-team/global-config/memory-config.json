@@ -21,5 +21,14 @@
     "manifest": "work-area/memory/baseline/manifest.json",
     "always_run": true,
     "validation_window_cycles": 5
+  },
+
+  "tiers": {
+    "_comment": "WI-3: ярусность вместо слияния. active управляет routing; provisional даёт мягкие хинты, не меняет routing; archived хранится с provenance. Кап действует ТОЛЬКО на active. Переходы детерминированы по baseline-счётчикам (WI-1), без 'на усмотрение LLM'. Слияние эвристик запрещено.",
+    "active_cap": 10,
+    "promote_confirm_M": 2,
+    "demote_refute_K": 2,
+    "merge_allowed": false,
+    "active_requires_falsification": true
   }
 }

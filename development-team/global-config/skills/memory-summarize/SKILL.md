@@ -151,6 +151,43 @@ compatibility: opencode
 }
 ```
 
+## Шаг 3.5. Ярусность и детерминированные переходы (WI-3)
+
+Слияние эвристик **запрещено** (`tiers.merge_allowed=false`). Вместо «объедини похожие
+при >10» действует ярусная модель. Параметры — `memory-config.json` → `tiers`.
+
+### Ярусы
+
+| tier | Влияние | Назначение |
+|------|---------|------------|
+| `active` | управляет **жёсткими routing-решениями** (team-lead) | подтверждённое знание |
+| `provisional` | только **мягкие хинты**, **не меняет routing** | индуцирована из n=1, ждёт корроборации |
+| `archived` | не влияет на routing, хранится с provenance | опровергнута или вытеснена; может быть ре-промоутнута |
+
+### Детерминированные правила перехода (по baseline-счётчикам, WI-1)
+
+Применяй **механически**, не «на усмотрение LLM». Каждый переход → запись в
+`changelog.jsonl` (WI-6) с полем `rule`.
+
+- **Создание:** новая эвристика из одного цикла (n=1) → `tier:"provisional"`.
+- **Промоут `provisional → active`:** `confirm_count ≥ promote_confirm_M`
+  (`rule:"confirm_count>=M"`). Промоут запрещён, если у эвристики нет
+  `falsification_condition` (см. ниже).
+- **Демоут `active → archived`:** `refute_count ≥ demote_refute_K`
+  (`falsification_condition` выполнялось по baseline в течение K циклов;
+  `rule:"refute_count>=K"`).
+- **Кап только на active:** если число `active` > `active_cap` — **демоутни** лишние
+  в `archived` по правилу (наименьший `confirm_count`, при равенстве — наибольший
+  `current_cycle - last_confirmed_cycle`; `rule:"active_cap_overflow"`). **Не сливай.**
+- **Ре-промоут:** `archived` может вернуться в `provisional`/`active`, если снова
+  набирает корроборацию по baseline.
+
+### Обязательность `falsification_condition`
+
+Эвристика **без** `falsification_condition` **не может быть `active`**
+(`tiers.active_requires_falsification=true`). Максимум — `provisional`. Это закрывает
+самоподтверждающиеся эвристики: правило, которое нечем опровергнуть, не управляет routing.
+
 ## Шаг 4. Обнови GlobalMem (Global Conceptual Memory)
 
 На основе сгенерированных эвристик и результатов цикла сформируй обновление для global-memory.md:
@@ -197,11 +234,13 @@ compatibility: opencode
 
 # Ограничения
 
-- Не перезаписывай conceptual.md глобально — дополняй и обновляй существующие эвристики
-- Не теряй историю: опровергнутые эвристики → в «Устаревшие / отозванные», не удаляй
-- Не создавай эвристик без источника (цикл + агент + finding)
-- Не превышай 10 активных эвристик — объединяй похожие
-- Если задача ESCALATED — не генерируй новых эвристик (недостаточно данных)
+- Источник истины — `conceptual.json`; `conceptual.md` всегда производный, не правь его в обход JSON
+- Не теряй историю: опровергнутые эвристики → `tier:"archived"` с provenance, не удаляй
+- Не создавай эвристик без `evidence` (реальные finding_id/entry_id)
+- **Не сливай эвристики** (WI-3, `merge_allowed=false`). Кап `active_cap` действует только
+  на `active`; переполнение → демоут лишних в `archived` по правилу, не слияние
+- Переходы ярусов — только по детерминированным правилам (Шаг 3.5), не «на усмотрение LLM»
+- Эвристика без `falsification_condition` не может быть `active` (максимум `provisional`)
 - Результат всегда должен быть machine-actionable (чёткий формат для записи в файлы)
 
 # Self-check
@@ -211,6 +250,10 @@ compatibility: opencode
 - [ ] LLM-промпт содержит все 4 секции (ProcMem, FeedMem, existing_conceptual, требования)
 - [ ] Эвристики привязаны к agent_id (per-agent ConMem)
 - [ ] У каждой эвристики `evidence` ссылается на реальные finding_id/entry_id (нет висячих ссылок, WI-2)
+- [ ] Новые эвристики (n=1) созданы как provisional; промоут/демоут — по правилам Шага 3.5 (WI-3)
+- [ ] Слияния нет; переполнение active решено демоутом, не слиянием
+- [ ] Все active-эвристики имеют falsification_condition
 - [ ] GlobalMem обновлён со статусом задачи и рекомендациями
 - [ ] Опровергнутые эвристики переведены в tier:"archived"
+- [ ] Переходы ярусов залогированы в changelog.jsonl с rule (WI-6)
 - [ ] Результат в формате {conceptual_json, conceptual_md, global_memory_update, ...}

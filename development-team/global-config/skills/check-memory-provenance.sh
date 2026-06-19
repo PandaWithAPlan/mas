@@ -6,7 +6,8 @@
 #   - finding_id из feedback.json (failed_details[].finding_id, guardian.critical_issues[].finding_id)
 #   - entry_id   из procedural.json (history[].entries[].entry_id)
 # Висячая (dangling) ссылка → exit 1. Дополнительно: эвристики ярусов active/provisional
-# обязаны иметь непустой evidence.
+# обязаны иметь непустой evidence; эвристики tier=active обязаны иметь
+# falsification_condition (WI-3).
 #
 # Использование:
 #   sh check-memory-provenance.sh [MEMORY_DIR]
@@ -79,6 +80,9 @@ for h in heuristics:
     evidence = h.get("evidence", []) or []
     if tier in ("active", "provisional") and not evidence:
         print(f"FAIL: эвристика '{hid}' (tier={tier}) не имеет evidence", file=sys.stderr)
+        status = 1
+    if tier == "active" and not h.get("falsification_condition"):
+        print(f"FAIL: эвристика '{hid}' (tier=active) не имеет falsification_condition (WI-3)", file=sys.stderr)
         status = 1
     for ev in evidence:
         if ev not in known:
