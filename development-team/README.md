@@ -127,6 +127,7 @@ Explorer → Analyst → Architect → [DevOps: префлайт-гейт] → C
 ```
 global-config/                  → копируется в ~/.config/opencode/
 ├── opencode.json               # модели, права (process-level), глобальные предохранители
+├── memory-config.json          # параметры памяти MALMAS (baseline, ярусы, ε, рекомпакция, версионирование)
 ├── AGENTS.md                   # общие правила, модель исполнения навыков, матрица ролей и прав
 ├── agents/                     # определения 11 агентов
 │   ├── team-lead.md
@@ -181,7 +182,7 @@ work-area/
    mkdir -p ~/.config/opencode
    cp -r global-config/* ~/.config/opencode/
    ```
-   После копирования в `~/.config/opencode/` окажутся `opencode.json`, `AGENTS.md`, `agents/`, `skills/`.
+   После копирования в `~/.config/opencode/` окажутся `opencode.json`, `memory-config.json`, `AGENTS.md`, `agents/`, `skills/`.
 
 3. **Проверьте, что JSON валиден:**
    ```bash

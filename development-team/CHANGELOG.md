@@ -5,6 +5,76 @@ Format: [MAJOR.MINOR.PATCH] — YYYY-MM-DD
 
 ---
 
+## [1.7.0] — 2026-06-19
+
+### Назначение
+
+Доработка подсистемы памяти (MALMAS) — **замыкание контура коррекции эвристик**.
+В первоисточнике (Dong et al., 2026, arXiv:2604.20261) память безопасна, потому что
+качество эвристик корректируется неподделываемой метрикой (валидационная полезность
+признака). При переносе в домен разработки ПО сенсор заменён вердиктами tester/guardian,
+scope которых выбирает та же heuristic-driven маршрутизация → петля самоподтверждения.
+Несущая конструкция исправления — объективный якорь (baseline) + ε-разведка; остальное
+обслуживает их или чистит сопутствующие риски. WI-7 (разнесение интерпретатора/решателя)
+сознательно не реализован.
+
+### Added
+- **`global-config/memory-config.json`** (новый) — единый источник числовых порогов и
+  режимов памяти (baseline, ярусы, ε-разведка, рекомпакция, версионирование). Отдельный
+  файл, не часть схемы opencode.json, читается навыками `memory-*` и линтерами.
+- **Объективный якорь — фиксированный baseline (WI-1).** `tester` каждый цикл прогоняет
+  стабильный регрессионный набор (`work-area/memory/baseline/manifest.json`) независимо
+  от Router/эвристик; эвристики валидируются **только** по baseline-результатам.
+  - `feedback.json` — поле `source: baseline|scoped` у каждой тест-записи + разбивка `by_source`
+  - `tester.md`, `test-plan` — baseline всегда P0, не режется scope-reduce/ε-разведкой
+  - `memory-summarize` — Шаг 2.5: baseline-валидация эвристик + процедура «проверить
+    эвристику X за N циклов»
+- **Структурный provenance (WI-2).** Концептуальная память переведена на `conceptual.json`
+  (источник истины) + генерируемый `conceptual.md`.
+  - `procedural.json`/`feedback.json` — детерминированные `entry_id`/`finding_id` (хэши)
+  - схема эвристики: `id, rule, agent, tier, evidence, confidence, falsification_condition,
+    created/last_confirmed/last_tested_cycle, confirm_count, refute_count, type`
+  - **новый линтер `skills/check-memory-provenance.sh`** — резолвит `evidence` →
+    `finding_id`/`entry_id`, exit 1 при dangling-ссылке или active-эвристике без
+    `falsification_condition`
+- **Ярусность вместо слияния (WI-3).** `active`/`provisional`/`archived`; детерминированные
+  переходы по baseline-счётчикам (M промоутов / K опровержений); кап только на `active`
+  (демоут, не слияние); `active` обязана иметь `falsification_condition`.
+- **ε-разведка в Router (WI-5).** С вероятностью ε team-lead не применяет дискреционное
+  расширение scope выбранной эвристики (как будто она ложна), исход — контр-свидетельство.
+  baseline/P0/непереопределяемые гейты неприкосновенны.
+- **Stateless-рекомпакция (WI-4).** Режимы `incremental`/`recompact`; в `recompact`
+  `existing_conceptual` не подаётся в промпт (канон `ConMem = LLM(ProcMem, FeedMem)`),
+  результат диффится, не воспроизведённые эвристики → `archived`.
+- **Обучение на ESCALATED (WI-8).** ESCALATED порождает эвристики `type:"failure-mode"`
+  (провалившийся подход, сигнатура плато, дестабилизированные зоны); team-lead обязан
+  вызвать `memory-update` при эскалации, Router учитывает failure-mode при похожих задачах.
+- **Версионирование и журнал мутаций памяти (WI-6).** `memory-update` Шаг 5.5: append-only
+  снапшоты `snapshots/cycle-NNN-.../`, журнал `changelog.jsonl` (мутация + детерминированное
+  правило + причина), процедуры диффа и отката.
+
+### Changed
+- **Атрибуция MALMAS исправлена (WI-9):** `Zhang et al., 2024` → **Dong et al., 2026
+  (arXiv:2604.20261)** в `team-lead.md`, `memory-summarize`, `task-delegation-format`
+  (Zhang et al., 2024 — это работа про golden features, на которую MALMAS лишь ссылается).
+- **Формула согласована с дизайном (WI-9):** канон — stateless-проход (режим `recompact`);
+  итеративное окно (`incremental`) задокументировано как сознательное ограниченное отклонение.
+- `team-lead.md` — Routing Intelligence работает только по `active`-эвристикам; добавлены
+  ε-разведка, триггер рекомпакции, обязательный memory-update при ESCALATE.
+- `memory-retrieve` — учёт яруса: `provisional` только мягкий хинт (не меняет routing),
+  `archived` игнорируется.
+- `AGENTS.md` — секции Memory/MALMAS Rules дополнены (якорь, ярусы, ε, версионирование);
+  новая секция «MALMAS: attribution & domain adaptations» (что перенесено точно / адаптировано).
+- `README.md` — секция «Память» описывает замкнутый контур; структура/развёртывание/проверки
+  отражают `memory-config.json` и `check-memory-provenance.sh`.
+
+### Не входит
+- **WI-7** (вынос `memory-summarize` под отдельную роль `memory-curator`) — не реализован.
+- `psao-annotate` ссылается на PSAO (Zhang et al., 2024) — это отдельный метод, не MALMAS,
+  поэтому атрибуция там не менялась.
+
+---
+
 ## [1.6.0] — 2026-06-18
 
 ### Added
