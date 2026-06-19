@@ -35,5 +35,14 @@
   "exploration": {
     "_comment": "WI-5: ε-разведка в Router (team-lead), чтобы политика могла себя опровергнуть. С вероятностью epsilon Router НЕ применяет дискреционное расширение scope, продиктованное выбранной active-эвристикой (маршрутизирует как будто она ложна), а исход записывает контр-свидетельством в confirm_count/refute_count. ВАРЬИРУЕТСЯ ТОЛЬКО дискреционный scope: baseline (WI-1), P0-тесты и непереопределяемые гейты (BLOCKER/P0 FAILED) разведка не трогает НИКОГДА.",
     "epsilon": 0.1
+  },
+
+  "recompaction": {
+    "_comment": "WI-4: разрыв итерации. Внутри окна window_N циклов допустимы дешёвые итеративные обновления. Раз в window_N циклов (или по drift_trigger) выполняется stateless-рекомпакция: conceptual.json выводится с нуля ТОЛЬКО из procedural.json + feedback.json, без подачи предыдущего conceptual на вход (буквально ConMem = LLM(ProcMem, FeedMem)). Канон после WI-4 — stateless-проход; итеративное окно — сознательное ограниченное отклонение (см. WI-9).",
+    "window_N": 5,
+    "drift_trigger": {
+      "active_delta_threshold": 5,
+      "refute_streak": 3
+    }
   }
 }

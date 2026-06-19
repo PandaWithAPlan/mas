@@ -303,7 +303,14 @@ feature-generation agents), твой Router выбирает subset агенто
 2. дождись результатов тестирования;
 3. только после этого передай материалы Guardian;
 4. прочитай заключение Guardian вместе с результатами Tester;
-5. вызови `skill({ name: "memory-update" })` — навык обновит procedural.json и feedback.json, затем вызовет `memory-summarize` (MALMAS Summary-Agent) для LLM-сжатия ProcMem + FeedMem → эвристики и автоматически обновит `work-area/memory/conceptual.md` и `work-area/memory/global-memory.md`. Ручное обновление conceptual.md / global-memory.md после вызова навыка не требуется — `memory-summarize` выполняет анализ паттернов, дублирующихся ошибок, перекрёстных замечаний и обобщение эвристик автоматически.
+5. вызови `skill({ name: "memory-update" })` — навык обновит procedural.json и feedback.json, затем вызовет `memory-summarize` (MALMAS Summary-Agent) для LLM-сжатия ProcMem + FeedMem → эвристики и автоматически обновит `work-area/memory/conceptual.json` (→ `conceptual.md`) и `work-area/memory/global-memory.md`. Ручное обновление после вызова навыка не требуется.
+   - **Режим памяти (WI-4):** перед вызовом определи `mode` для `memory-update`.
+     Stateless-**рекомпакция** (`recompact`) запускается, если с последней рекомпакции
+     прошло ≥ `recompaction.window_N` циклов **или** сработал `recompaction.drift_trigger`
+     (`memory-config.json`): рост числа active-эвристик за окно ≥ `active_delta_threshold`,
+     либо серия опровержений `refute_streak`. Иначе — `incremental`. Зафиксируй выбор в
+     сессии: `Режим памяти: incremental|recompact (причина)`. При `recompact` ожидается
+     дифф active-эвристик до/после — отрази дельту дрейфа в сессии.
 
 Tester и Guardian работают строго последовательно.
 

@@ -40,6 +40,27 @@ compatibility: opencode
 
 # Процедура
 
+## Режим работы (WI-4): incremental / recompact
+
+Прежде чем начать, определи режим (триггер задаёт team-lead, см. его файл; параметры —
+`memory-config.json` → `recompaction`):
+
+- **incremental** (по умолчанию, внутри окна `window_N` циклов): дешёвое итеративное
+  обновление — `existing_conceptual` подаётся на вход, эвристики дополняются/обновляются.
+  Это **сознательное ограниченное отклонение** от канонической формулы ради экономии
+  (зафиксировано в WI-9).
+- **recompact** (раз в `window_N` циклов или по `drift_trigger`): **stateless-рекомпакция**.
+  Канонический проход `ConMem = LLM(ProcMem, FeedMem)`:
+  - `conceptual.json` выводится **с нуля**, **только** из `procedural.json` + `feedback.json`
+    за всю историю. **`existing_conceptual` НЕ подаётся в промпт** — иначе накопленный дрейф
+    переносится дальше.
+  - Результат **диффится** с предыдущим `conceptual.json`. Эвристики, которые не
+    переоткрылись из фактических слоёв, переводятся в `tier:"archived"` с причиной
+    `"не воспроизведена при stateless-рекомпакции (цикл N)"` и логируются в changelog (WI-6).
+  - Дрейф измерим: дельта числа `active`-эвристик между двумя рекомпакциями — метрика дрейфа.
+
+Шаги 1–2 и 2.5 одинаковы для обоих режимов. Различие — в Шаге 3 (вход промпта).
+
 ## Шаг 1. Извлеки значимые события из ProcMem
 
 Из `procedural_entries` выбери записи, заслуживающие сохранения в эвристиках:
@@ -98,7 +119,13 @@ compatibility: opencode
 
 ## Шаг 3. Сгенерируй эвристики через LLM (ConMem)
 
-Источник истины — `conceptual.json` (WI-2). Вызови LLM со следующим промптом:
+Источник истины — `conceptual.json` (WI-2). **Вход промпта зависит от режима (WI-4):**
+- **incremental:** включай секцию «Существующие эвристики» (`existing_conceptual`).
+- **recompact:** секцию «Существующие эвристики» **полностью убери из промпта** — выводи
+  `conceptual.json` как чистую функцию `procedural.json` + `feedback.json` за всю историю.
+  Это и есть канон `ConMem = LLM(ProcMem, FeedMem)`.
+
+Вызови LLM со следующим промптом:
 
 ```
 Ты — Summary-Agent в MALMAS-системе. Твоя задача — проанализировать сырые данные
@@ -114,6 +141,7 @@ compatibility: opencode
  guardian: finding_id, verdict, critical_issues]
 
 ## Существующие эвристики (НЕ дублировать, дополнять или опровергать):
+## [ТОЛЬКО в режиме incremental. В режиме recompact эту секцию УБРАТЬ целиком — WI-4]
 [existing_conceptual — объект conceptual.json, если есть]
 
 ## Требования к эвристикам:
@@ -245,6 +273,8 @@ compatibility: opencode
 
 # Self-check
 
+- [ ] Режим определён (incremental/recompact); в recompact existing_conceptual НЕ в промпте (WI-4)
+- [ ] При recompact: дифф с предыдущим conceptual.json сделан, не воспроизведённые эвристики → archived
 - [ ] ProcMem проанализирован на FAILED-действия и повторы
 - [ ] FeedMem извлечены провалы, affected_zones, критические замечания
 - [ ] LLM-промпт содержит все 4 секции (ProcMem, FeedMem, existing_conceptual, требования)
