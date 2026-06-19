@@ -14,5 +14,12 @@
       "feedback.json",
       "procedural.json"
     ]
+  },
+
+  "baseline": {
+    "_comment": "WI-1: объективный якорь. Стабильный регрессионный набор, который tester прогоняет КАЖДЫЙ цикл независимо от Router/эвристик. Только baseline-результаты валидируют эвристики (scoped игнорируются — их сформировала сама эвристика).",
+    "manifest": "work-area/memory/baseline/manifest.json",
+    "always_run": true,
+    "validation_window_cycles": 5
   }
 }

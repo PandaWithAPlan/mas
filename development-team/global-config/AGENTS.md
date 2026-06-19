@@ -94,7 +94,8 @@ Three-layer project memory, updated by Team Lead via `memory-update` → `memory
 - After each cycle, Team Lead calls `memory-update` (which delegates to `memory-summarize` for LLM compression).
 - Agents check `procedural.json` for duplicate/failed actions and do NOT repeat them.
 - Tester and Guardian use `feedback.json` from prior cycles to expand check scope (affected zones).
-- Heuristics in `conceptual.md` that are disproven in practice get moved to archive.
+- **Objective anchor (WI-1):** Tester always runs the fixed baseline set (`work-area/memory/baseline/manifest.json`) every cycle, independent of Router/heuristics. Each test record in `feedback.json` carries `source: "baseline" | "scoped"`. Heuristics are validated **only** against baseline results (scoped is what the heuristic itself dictated). Baseline is never disabled by scope reduction or ε-exploration.
+- Heuristics in `conceptual.json` that are disproven by baseline get demoted to `archived` (WI-3).
 
 # Team Lead Quick Reference
 

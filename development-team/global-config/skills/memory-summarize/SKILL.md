@@ -57,6 +57,45 @@ compatibility: opencode
 - **Affected zones:** модули, задетыe критическими замечаниями
 - **Cross-cycle patterns:** если провалы повторяются из цикла в цикл — это системная проблема
 
+## Шаг 2.5. Baseline-валидация эвристик (WI-1)
+
+Эвристику нельзя валидировать против поведения, которое она сама и продиктовала.
+Поэтому корроборация/опровержение считаются **только по baseline-результатам**
+(`feedback_entries[].testing.by_source.baseline` и `failed_details` с `source:"baseline"`),
+а scoped-результаты для счётчиков игнорируются.
+
+Для каждой существующей эвристики, чья зона затронута в этом цикле:
+- Если baseline-наблюдение **соответствует** правилу эвристики (предсказание сбылось)
+  → инкрементируй `confirm_count`, обнови `last_confirmed_cycle`.
+- Если выполнено `falsification_condition` эвристики **по baseline** → инкрементируй
+  `refute_count`.
+- В любом случае обнови `last_tested_cycle`.
+- Запиши изменения счётчиков в `changelog.jsonl` (WI-6) с `rule` и ссылкой на
+  baseline-finding в `evidence`/`reason`.
+
+Эти счётчики — вход для детерминированных правил перехода ярусов (WI-3).
+
+### Манифест baseline (`work-area/memory/baseline/manifest.json`)
+
+Схема (источник истины по составу якоря; версионируется, ведётся вручную/Team Lead):
+```json
+{
+  "project": "[название проекта]",
+  "updated": "YYYY-MM-DD",
+  "test_ids": ["BASE-001", "BASE-002"],
+  "description": "стабильный регрессионный набор; меняется осознанно, не под задачу"
+}
+```
+
+### Процедура «проверить эвристику X против baseline-only за N циклов»
+
+`N` = `baseline.validation_window_cycles` из `memory-config.json`.
+1. Собери записи `feedback.json` за последние N циклов.
+2. Отфильтруй тесты с `source:"baseline"` (scoped отбрось).
+3. Сопоставь baseline-исходы в зоне эвристики X с её `rule` и `falsification_condition`.
+4. Вывод: подтверждена (рост `confirm_count`), опровергнута (рост `refute_count`)
+   или нейтральна. Это и есть ground-truth проверка эвристики, не зависящая от Router.
+
 ## Шаг 3. Сгенерируй эвристики через LLM (ConMem)
 
 Источник истины — `conceptual.json` (WI-2). Вызови LLM со следующим промптом:
