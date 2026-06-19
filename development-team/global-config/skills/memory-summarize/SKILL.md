@@ -36,7 +36,7 @@ compatibility: opencode
 - `agent_ids` — список агентов, участвовавших в цикле (explorer, coder-back, tester, guardian, ...)
 - `cycle_number` — номер цикла (1, 2, 3)
 - `task_id` — идентификатор задачи (DEV-XXX)
-- `existing_conceptual` — содержимое conceptual.md (если существует) для дополнения, а не перезаписи
+- `existing_conceptual` — содержимое `conceptual.json` (если существует) для дополнения, а не перезаписи (источник истины — JSON, не Markdown; WI-2)
 
 # Процедура
 
@@ -59,49 +59,57 @@ compatibility: opencode
 
 ## Шаг 3. Сгенерируй эвристики через LLM (ConMem)
 
-Вызови LLM со следующим промптом:
+Источник истины — `conceptual.json` (WI-2). Вызови LLM со следующим промптом:
 
 ```
 Ты — Summary-Agent в MALMAS-системе. Твоя задача — проанализировать сырые данные
-цикла и сформулировать СЖАТЫЕ, ПЕРЕИСПОЛЬЗУЕМЫЕ эвристики.
+цикла и сформулировать СЖАТЫЕ, ПЕРЕИСПОЛЬЗУЕМЫЕ эвристики в виде conceptual.json.
 
 ## Сырые данные
 
 ### Procedural Memory (что делали агенты):
-[procedural_entries — в формате: agent | action | files_touched | status]
+[procedural_entries — в формате: entry_id | agent | action | files_touched | status]
 
 ### Feedback Memory (результаты тестов и аудита):
-[feedback_entries — testing: passed/failed; guardian: verdict, critical_issues]
+[feedback_entries — testing: finding_id, passed/failed, source(baseline/scoped);
+ guardian: finding_id, verdict, critical_issues]
 
 ## Существующие эвристики (НЕ дублировать, дополнять или опровергать):
-[existing_conceptual — содержимое conceptual.md, если есть]
+[existing_conceptual — объект conceptual.json, если есть]
 
 ## Требования к эвристикам:
 1. Одна эвристика = одно атомарное правило (что делать / чего избегать)
-2. Формат: HEURISTIC-ID (UPPER-KEBAB-CASE) + правило + условие срабатывания
-3. Каждая эвристика привязана к конкретному агенту (agent_id)
-4. Если эвристика уже существует — ОБНОВИ дату и формулировку, НЕ дублируй
-5. Если существующая эвристика опровергнута практикой → пометь как ОТОЗВАННУЮ
-6. Не более 10 активных эвристик. При превышении — объедини похожие
-7. Не пиши очевидное («надо тестировать код», «надо документировать»)
-8. Каждая эвристика должна иметь источник (цикл, агент, finding)
+2. id в UPPER-KEBAB-CASE, стабилен на весь жизненный цикл эвристики
+3. Каждая эвристика привязана к agent (agent_id) либо "<cross-agent>"
+4. Если эвристика уже существует — ОБНОВИ её поля, НЕ создавай дубль с тем же смыслом
+5. `evidence` — массив РЕАЛЬНЫХ finding_id/entry_id из сырых данных выше.
+   Эвристик без evidence не бывает. Висячих ссылок не бывает.
+6. У каждой эвристики обязателен `falsification_condition` — какое BASELINE-наблюдение
+   её хоронит. Без него эвристика не может быть tier:"active" (см. WI-3).
+7. Новая эвристика, индуцированная из n=1 (один цикл) → tier:"provisional" (WI-3).
+8. НЕ объединяй похожие эвристики (слияние запрещено, WI-3). Кап действует только
+   на active; механику ярусов применяет memory-summarize по правилам WI-3.
+9. Не пиши очевидное («надо тестировать код», «надо документировать»)
 
-## Формат вывода:
-Выдай Markdown-блок с секциями по агентам и общей секцией:
-
-### explorer
-- **HEURISTIC-ID** — правило. Источник: цикл N, [finding]
-- ...
-
-### coder-back
-- ...
-
-### <cross-agent> (общие, не привязанные к конкретному агенту)
-- **GLOBAL-HEURISTIC-ID** — правило. Источник: цикл N, [finding]
-- ...
-
-Также выдай список ОТОЗВАННЫХ эвристик (если есть):
-- **OLD-ID** — отозвана: [причина]
+## Формат вывода — объект conceptual.json:
+{
+  "heuristics": [
+    {
+      "id": "HEURISTIC-ID",
+      "rule": "...",
+      "agent": "coder-back",
+      "tier": "active|provisional|archived",
+      "evidence": ["find-...", "proc-..."],
+      "confidence": 0.0,
+      "falsification_condition": "...",
+      "created_cycle": N,
+      "last_confirmed_cycle": N,
+      "last_tested_cycle": N,
+      "confirm_count": 0,
+      "refute_count": 0
+    }
+  ]
+}
 ```
 
 ## Шаг 4. Обнови GlobalMem (Global Conceptual Memory)
@@ -134,15 +142,19 @@ compatibility: opencode
 Сформируй следующее **сам** и встрой в свой ответ/артефакт (это шаблон того, что ты пишешь, а не возвращаемое значение функции — повторно навык не вызывается):
 ```
 {
-  "conceptual_update": "### explorer\n- **HEURISTIC-ID** — ...\n...",
+  "conceptual_json": { "heuristics": [ ... ] },   // источник истины (WI-2)
+  "conceptual_md": "# Концептуальная память...",   // СГЕНЕРИРОВАН из conceptual_json
   "global_memory_update": "# Глобальная память проекта\n...",
-  "deprecated_heuristics": ["OLD-ID", ...],
+  "deprecated_heuristics": ["OLD-ID", ...],         // переведены в tier:"archived"
   "new_heuristic_count": N,
   "active_heuristic_count": N
 }
 ```
 
-Этот результат используется `memory-update` для записи в conceptual.md и global-memory.md.
+`conceptual_md` — производное представление: собери его из `conceptual_json`
+группировкой по `agent` и ярусам (формат — см. memory-update, Шаг 4). Источник
+истины — `conceptual_json`. Этот результат используется `memory-update` для записи
+в conceptual.json (→ conceptual.md) и global-memory.md.
 
 # Ограничения
 
@@ -159,6 +171,7 @@ compatibility: opencode
 - [ ] FeedMem извлечены провалы, affected_zones, критические замечания
 - [ ] LLM-промпт содержит все 4 секции (ProcMem, FeedMem, existing_conceptual, требования)
 - [ ] Эвристики привязаны к agent_id (per-agent ConMem)
+- [ ] У каждой эвристики `evidence` ссылается на реальные finding_id/entry_id (нет висячих ссылок, WI-2)
 - [ ] GlobalMem обновлён со статусом задачи и рекомендациями
-- [ ] Опровергнутые эвристики явно помечены
-- [ ] Результат в формате {conceptual_update, global_memory_update, ...}
+- [ ] Опровергнутые эвристики переведены в tier:"archived"
+- [ ] Результат в формате {conceptual_json, conceptual_md, global_memory_update, ...}
