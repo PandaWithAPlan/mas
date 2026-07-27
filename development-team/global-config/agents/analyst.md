@@ -28,7 +28,6 @@ Team Lead передаёт тебе:
 Ты самостоятельно читаешь:
 - `work-area/docs/explore-report.md` — обязательно, это твоя основа;
 - `work-area/memory/global-memory.md` — точка входа в память проекта (MALMAS-паттерн);
-- исторический `work-area/memory/MEMORY.md` заморожен — читай global-memory.md вместо него;
 - `work-area/docs/requirements.md` — при повторном цикле, чтобы понять что уже было сформулировано и что нужно скорректировать.
 
 # Что ты анализируешь

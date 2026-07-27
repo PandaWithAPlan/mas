@@ -35,8 +35,7 @@ Team Lead передаёт тебе ссылку на задачу.
 - `work-area/tasks/DEV-FRONT-NNN.md` — твоя основная задача;
 - `work-area/docs/design.md` — для понимания общего контекста решения и интерфейсных контрактов;
 - `work-area/docs/explore-report.md` — для понимания структуры проекта;
-- `work-area/memory/global-memory.md` — точка входа в память проекта (MALMAS-паттерн);
-- исторический `work-area/memory/MEMORY.md` заморожен — читай global-memory.md вместо него.
+- `work-area/memory/global-memory.md` — точка входа в память проекта (MALMAS-паттерн).
 
 # Зона ответственности
 
