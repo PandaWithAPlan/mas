@@ -1,6 +1,6 @@
 # Чеклист адаптации development-team под проект
 
-Версия чеклиста: 1.3.0  
+Версия чеклиста: 1.7.0  
 Система: OpenCode Multi-Agent System (MALMAS)
 
 Используй этот документ при каждом переносе конфигурации на новый проект.
@@ -133,30 +133,75 @@ cp development-team/project-config/AGENTS.md     /path/to/your-project/AGENTS.md
 ## Шаг 4 — Создать work-area/ в проекте
 
 Пути ниже соответствуют тем, что прописаны в `global-config/opencode.json`
-(в частности, отчёты Tester лежат в `work-area/reports/test-results/`).
+и `global-config/memory-config.json` (схема памяти MALMAS после WI-1…WI-6).
 
 ```bash
-mkdir -p work-area/memory
 mkdir -p work-area/docs
 mkdir -p work-area/tasks
 mkdir -p work-area/sessions
 mkdir -p work-area/reports/test-results
-touch work-area/memory/procedural.json
-touch work-area/memory/feedback.json
-touch work-area/memory/metrics.json
+mkdir -p work-area/memory/baseline
+mkdir -p work-area/memory/snapshots
+```
+
+### 4.1 Фактические слои памяти
+
+`procedural.json` и `feedback.json` — это **объекты с ключом `history`**, а не массивы.
+Пустой массив `[]` здесь недопустим: линтер `check-memory-provenance.sh` и навыки
+`memory-*` обращаются к `.history` и на массиве упадут.
+
+```bash
+printf '{"history": []}\n' > work-area/memory/procedural.json
+printf '{"history": []}\n' > work-area/memory/feedback.json
+printf '[]\n'              > work-area/memory/metrics.json
+```
+
+`metrics.json` — именно массив: `task-metrics` дописывает в него записи задач.
+
+### 4.2 Концептуальная память
+
+Источник истины — **`conceptual.json`**; `conceptual.md` **генерируется** из него
+навыком `memory-update` и вручную не правится.
+
+```bash
+printf '{"heuristics": []}\n' > work-area/memory/conceptual.json
 touch work-area/memory/conceptual.md
 touch work-area/memory/global-memory.md
 ```
 
-Инициализируй `procedural.json`, `feedback.json` и `metrics.json` как пустые JSON-массивы:
+### 4.3 Объективный якорь (WI-1)
 
-```json
-[]
+Каталог `baseline/` создаётся сразу, а сам манифест **посеет `team-lead`** после
+первого цикла — из тестов, которые реально прошли (`memory-update`, Шаг 0).
+Создавать манифест вручную с выдуманными `test_ids` не нужно и вредно.
+
+Пока манифеста нет, `tester` обязан выводить в `TR-NNN.md` предупреждение
+`⚠️ BASELINE ОТСУТСТВУЕТ`. Увидеть его на первом цикле — нормально; **увидеть
+его на втором и последующих — сигнал, что якорь не посеялся** и эвристики
+не валидируются ничем.
+
+### 4.4 Версионирование памяти (WI-6)
+
+`changelog.jsonl` — журнал мутаций в формате JSON Lines, дополняется построчно.
+Создаётся пустым (нулевой длины), а не с `[]`:
+
+```bash
+: > work-area/memory/changelog.jsonl
 ```
 
-- [ ] Директория `work-area/` создана со всеми поддиректориями (`memory/`, `docs/`, `tasks/`, `sessions/`, `reports/test-results/`)
-- [ ] `procedural.json`, `feedback.json`, `metrics.json` инициализированы как `[]`
+Снапшоты складываются в `work-area/memory/snapshots/cycle-NNN-.../`;
+глубина хранения — `snapshot_retention` в `memory-config.json` (по умолчанию 20).
+
+### Чек-лист шага
+
+- [ ] Созданы `docs/`, `tasks/`, `sessions/`, `reports/test-results/`, `memory/baseline/`, `memory/snapshots/`
+- [ ] `procedural.json` и `feedback.json` инициализированы как `{"history": []}` (**не** `[]`)
+- [ ] `conceptual.json` инициализирован как `{"heuristics": []}`
+- [ ] `metrics.json` инициализирован как `[]`
 - [ ] `conceptual.md` и `global-memory.md` созданы (могут быть пустыми)
+- [ ] `changelog.jsonl` создан пустым
+- [ ] `baseline/manifest.json` **не** создавался вручную — его посеет `team-lead` после первого цикла
+- [ ] Проверено, что `sh ~/.config/opencode/skills/check-memory-provenance.sh` отрабатывает без падения (ожидаемо `SKIP` или `OK`)
 
 ---
 
@@ -169,6 +214,14 @@ touch work-area/memory/global-memory.md
   Строгая проверка `python -m json.tool` подходит только для `global-config/opencode.json` (без комментариев).
 - [ ] Зоны `coder-front` и `coder-back` в `opencode.json` совпадают с тем, что написано в `AGENTS.md`
 - [ ] Удалены LSP-серверы для неиспользуемых языков
+- [ ] **Линтеры конфигурации зелёные** (все три, из корня репозитория конфигурации):
+  ```bash
+  sh global-config/skills/check-skill-map.sh
+  sh global-config/skills/check-artifact-permissions.sh
+  sh global-config/skills/check-memory-provenance.sh
+  ```
+  Первые два обязаны дать `OK`. Третий на новом проекте даёт `SKIP` (памяти ещё нет) —
+  это нормально; `FAIL` означает, что файлы памяти инициализированы неверно (см. Шаг 4.1).
 - [ ] **Мерж прав кодера проверен** (критично): кодер одновременно может писать в свои зоны
   (`edit` из проектного конфига) и имеет ограниченный `bash` из глобального деналиста.
   Если `bash` у кодера открыт настежь — продублируй bash-деналист в проектный конфиг

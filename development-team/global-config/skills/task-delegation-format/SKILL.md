@@ -3,6 +3,7 @@ name: task-delegation-format
 description: Стандартизированный формат постановки задачи подчинённому агенту с контролем контекста и правилами владения артефактами
 license: MIT
 compatibility: opencode
+writes: work-area/tasks/**
 ---
 
 > ⚙️ **Это навык-инструкция, а не функция.** Вызов `skill({ name: "task-delegation-format" })` один раз подгружает этот текст в твой контекст — у навыка нет отдельного исполнения, входных аргументов и возвращаемого значения. Не жди, что навык «вернёт» `delegation_message`: прочитав процедуру, сам сформируй сообщение делегации и встрой его в свой ответ. Повторный вызов ради получения вывода — ошибка: ты снова получишь этот же текст.
@@ -211,7 +212,7 @@ PSAO применяется, если выполняется ХОТЯ БЫ ОД�
 | `work-area/docs/design.md` | `architect` | Все агенты | `architect` |
 | `work-area/reports/test-results/TR-NNN.md` | `tester` | Все агенты | `tester` |
 | `work-area/reports/guardian-NNN.md` | `guardian` | Все агенты | `guardian` |
-| `work-area/reports/final-report-NNN.md` | `reviewer` | Все агенты | `reviewer` |
+| `work-area/reports/final-report-NNN.html` | `reviewer` | Все агенты | `reviewer` |
 | `work-area/memory/*` | `team-lead` | Все агенты | **Только team-lead** |
 
 Если задача требует, чтобы агент изменил **чужой** артефакт — такое допустимо только

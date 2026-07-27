@@ -50,10 +50,28 @@ conc = load(conceptual)
 fb = load(feedback)
 proc = load(procedural)
 
+def history_of(data, path):
+    """Фактические слои — объекты с ключом 'history'. Массив здесь — типичная
+    ошибка инициализации (см. CHECKLIST, Шаг 4.1); сообщаем внятно, а не падаем."""
+    if data is None:
+        return []
+    if isinstance(data, list):
+        print("FAIL: %s инициализирован как массив; ожидается объект вида "
+              '{"history": [...]} (см. CHECKLIST, Шаг 4.1)' % path, file=sys.stderr)
+        sys.exit(1)
+    if not isinstance(data, dict):
+        print("FAIL: %s: ожидается объект вида {\"history\": [...]}" % path, file=sys.stderr)
+        sys.exit(1)
+    return data.get("history", []) or []
+
+if not isinstance(conc, dict):
+    print("FAIL: %s: ожидается объект вида {\"heuristics\": [...]}" % conceptual, file=sys.stderr)
+    sys.exit(1)
+
 # Собираем множество всех известных ID фактических слоёв.
 known = set()
-if fb:
-    for rec in fb.get("history", []):
+if fb is not None:
+    for rec in history_of(fb, feedback):
         testing = rec.get("testing", {}) or {}
         for fd in testing.get("failed_details", []) or []:
             if fd.get("finding_id"):
@@ -62,8 +80,8 @@ if fb:
         for ci in guardian.get("critical_issues", []) or []:
             if ci.get("finding_id"):
                 known.add(ci["finding_id"])
-if proc:
-    for rec in proc.get("history", []):
+if proc is not None:
+    for rec in history_of(proc, procedural):
         for entry in rec.get("entries", []) or []:
             if entry.get("entry_id"):
                 known.add(entry["entry_id"])

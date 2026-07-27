@@ -1,0 +1,74 @@
+name: Config checks
+
+# Статические проверки конфигураций мультиагентных систем.
+# Ловят класс дефектов, который не виден при чтении диффа: расхождение между
+# описанным процессом и правами, которыми он реально обеспечен.
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  development-team:
+    name: development-team
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: development-team
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Глобальный opencode.json — строгий JSON
+        run: |
+          python3 -c "import json; json.load(open('global-config/opencode.json'))"
+          echo "global-config/opencode.json: OK"
+
+      - name: memory-config.json — строгий JSON
+        run: |
+          python3 -c "import json; json.load(open('global-config/memory-config.json'))"
+          echo "global-config/memory-config.json: OK"
+
+      - name: Целостность карты навыков
+        run: sh global-config/skills/check-skill-map.sh
+
+      - name: Права на запись артефактов (реестр + навыки)
+        run: sh global-config/skills/check-artifact-permissions.sh
+
+      - name: Провенанс памяти (линтер исполним, схема валидна)
+        run: sh global-config/skills/check-memory-provenance.sh
+
+      - name: Провенанс памяти — фикстуры (позитив и негатив)
+        run: |
+          set -eu
+          LINTER="$PWD/global-config/skills/check-memory-provenance.sh"
+          FIX=$(mktemp -d)
+          mkdir -p "$FIX/work-area/memory"
+          cd "$FIX"
+
+          # Позитив: корректная инициализация по CHECKLIST, Шаг 4
+          printf '{"heuristics": []}\n' > work-area/memory/conceptual.json
+          printf '{"history": []}\n'    > work-area/memory/procedural.json
+          printf '{"history": []}\n'    > work-area/memory/feedback.json
+          sh "$LINTER"
+
+          # Негатив: висячая ссылка evidence обязана дать exit 1
+          cat > work-area/memory/conceptual.json <<'EOF'
+          {"heuristics":[{"id":"H-1","tier":"active","evidence":["find-missing"],"falsification_condition":"x"}]}
+          EOF
+          if sh "$LINTER"; then
+            echo "FAIL: линтер пропустил висячую ссылку evidence" >&2
+            exit 1
+          fi
+          echo "OK: негативная фикстура отработала (exit 1, как и ожидалось)"
+
+      - name: Не осталось плейсхолдеров в глобальном слое
+        run: |
+          set -eu
+          if grep -rn 'ЗАПОЛНИТЬ\|/path/to/\|FRONTEND_DIR\|BACKEND_DIR' global-config/; then
+            echo "FAIL: глобальный слой обязан быть переносимым — плейсхолдеры допустимы только в project-config/" >&2
+            exit 1
+          fi
+          echo "OK: плейсхолдеров в global-config/ нет"

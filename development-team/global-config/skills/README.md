@@ -17,7 +17,7 @@
 - **Сопровождающий** — единая точка, где видно весь арсенал навыков и связи
   между ними.
 
-## Дисциплина изменений (3 касания)
+## Дисциплина изменений (4 касания)
 
 Система рассчитана на рост: новые техники промптинга и паттерны добавляются
 **отдельными маленькими навыками**, чтобы оставаться модульной, гибкой и легко
@@ -27,14 +27,32 @@
 2. **Карта** — добавь/убери строку в таблице ниже.
 3. **Вызов** — добавь/убери вызов `skill({ name: "<name>" })` в нужном агенте
    (`../agents/<role>.md`) и при необходимости в `../AGENTS.md`.
+4. **Права** — если навык **пишет файлы**, объяви пути в front-matter полем
+   `writes:` (через запятую, glob-шаблоны допустимы) и убедись, что каждый
+   агент из колонки «Вызывает» имеет право записи по этим путям в
+   `../opencode.json`.
 
-Целостность «каждый навык ↔ строка в карте» проверяет `check-skill-map.sh`
-(можно запускать локально или в CI).
+Пример объявления:
+
+```yaml
+name: doc-update-module
+description: Обновление документации модуля
+compatibility: opencode
+writes: docs/**
+```
+
+Целостность проверяют два линтера (локально или в CI):
+
+- `check-skill-map.sh` — «каждый навык ↔ строка в карте», в обе стороны;
+- `check-artifact-permissions.sh` — «объявленные `writes:` ↔ права всех
+  вызывающих» плюс «Owns из реестра ролей ↔ права владельца». Навык без
+  `writes:` считается непишущим и пропускается — поэтому забытое объявление
+  не ломает сборку, но и не защищает; объявляй его сразу.
 
 ## Реестр
 
 Порядок строк — примерно по фазам конвейера
-(`Explorer → Analyst → Architect → DevOps gate → Coders → Tester → Guardian → Team Lead → Reviewer`).
+(`Explorer → Analyst → Architect → DevOps gate → Coders → Tester → Guardian → Team Lead → Doc Keeper → Reviewer`).
 
 | Навык | Назначение | Вызывает | Когда (триггер) | Зависимости / порядок | Фолбэк |
 |---|---|---|---|---|---|
@@ -42,12 +60,10 @@
 | `session-init` | Создать/вести журнал рабочей сессии | `team-lead` | Intake, после `memory-retrieve` | Владелец файла сессии — team-lead | — |
 | `complexity-parallel` | По complexity 0–10 выбрать режим запуска агентов и правила синхронизации | `team-lead` | Intake → 1.1, после оценки сложности | После оценки complexity | — |
 | `task-delegation-format` | Стандарт постановки задачи: 7 элементов, контроль контекста, владение артефактами | `team-lead` | При каждой делегации подчинённому агенту | Включает PSAO Gate (Шаг 3.5) | — |
-| `psao-annotate` | PSAO-аннотирование промпта против семантического дрейфа | `team-lead`, `architect`, `analyst`, любой агент | Делегирование complexity ≥5 / REWORK / критич. ограничения; критичные разделы артефактов | Внутри `task-delegation-format` Шаг 3.5.2 | PSAO Gate SKIPPED при complexity 1–3, без критич. ограничений |
+| `psao-annotate` | PSAO-аннотирование промпта против семантического дрейфа | `team-lead` (транзитивно, изнутри `task-delegation-format`) | Делегирование complexity ≥5 / REWORK / критич. ограничения | Не вызывается напрямую из файла агента — только через `task-delegation-format`, Шаг 3.5.2 | PSAO Gate SKIPPED при complexity 1–3, без критич. ограничений |
 | `devops-gate-check` | Единый алгоритм проверки необходимости DevOps Gate | `team-lead`, `coder-front`, `coder-back`, `tester` | Перед стартом кодеров/тестов/реализации | Каждый исполнитель вызывает отдельно | Gate не требуется → старт немедленно; devops недоступен 5 мин → пауза + эскалация |
 | `doc-scan-rules` | Построить индекс docs ↔ исходники (canonical_path) | `explorer` | При картировании проекта | Источник для `doc-update-*` | — |
 | `confidence-calibrate` | Калибровка уверенности по 4 критериям → confidence 0–100% | `architect`, `guardian` | Architect: оценки рисков/объёма/обратимости; Guardian: каждый finding ≥ SIGNIFICANT | Перед присвоением severity (Guardian) | — |
-| `doc-update-arch` | Обновить архитектурную документацию | `architect` | После проектирования решения | Использует индекс `doc-scan-rules` | — |
-| `doc-update-module` | Обновить документацию модуля | `coder-front`, `coder-back` | После изменения/добавления модуля | Использует `canonical_path` из `doc-scan-rules` | — |
 | `test-plan` | Приоритизация тест-кейсов (P0/P1/P2) и план тестирования | `tester` | После `memory-retrieve` + `devops-gate-check`, перед тестами | — | — |
 | `test-progress` | Самодиагностика прогресса: CONTINUE / SCOPE_REDUCE / STOP_PARTIAL | `tester` | После каждого тест-кейса/группы (каждые ~3) | По покрытию и остатку контекста | Решение STOP_PARTIAL → PARTIAL COMPLETION |
 | `guardian-scope` | Pre-flight: приоритизированный план анализа Guardian | `guardian` | После `memory-retrieve`, до анализа файлов | Учитывает affected zones из памяти | — |
@@ -57,6 +73,8 @@
 | `memory-summarize` | MALMAS Summary-Agent: ProcMem+FeedMem → ConMem + GlobalMem (LLM) | `team-lead` | Внутри `memory-update` | Вызывается из `memory-update` | — |
 | `incident-protocol` | Протокол инцидентов: зависание / PARTIAL COMPLETION | `team-lead` | При зависании субагента или PARTIAL | — | Классификация → продолжить / сузить scope / эскалировать |
 | `task-metrics` | Сформировать и записать метрики задачи в `metrics.json` | `team-lead` | После ACCEPT или ESCALATE, перед закрытием | Финальный шаг задачи | — |
+| `doc-update-arch` | Обновить архитектурную документацию проекта | `doc-keeper` | После ACCEPT, если архитектура менялась | Вход — секция «Материал для документации» в `design.md` | Архитектура не менялась → только строка в «Историю решений» |
+| `doc-update-module` | Обновить документацию модуля | `doc-keeper` | После ACCEPT, по разделу «Изменённые файлы» отчётов кодеров | Использует `canonical_path` из `doc-scan-rules` | Все правки косметические → документация не обновляется |
 | `report-data-extract` | Извлечь данные из всех артефактов в единый data-объект | `reviewer` | Pre-flight, после команды Team Lead, перед отчётом | Источник для `html-report` | session отсутствует → `null`, допустимо |
 | `doc-consistency-check` | Проверка согласованности документации | `reviewer` | Перед генерацией отчёта | — | — |
 | `html-report` | Сгенерировать HTML-отчёт для пользователя | `reviewer` | После `report-data-extract` + `doc-consistency-check` | На входе — data-объект | — |

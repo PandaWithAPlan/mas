@@ -11,7 +11,8 @@
 | `tester` | subagent | Functional testing, regression, boundary | `work-area/reports/test-results/TR-NNN.md` |
 | `guardian` | subagent | Quality, security, correctness audit | `work-area/reports/guardian-NNN.md` |
 | `devops` | subagent | Infrastructure consultant + executor | `work-area/reports/devops-status.md` |
-| `reviewer` | subagent | Final user-facing HTML report | `work-area/reports/final-report-NNN.md` |
+| `doc-keeper` | subagent | Project documentation upkeep (sole owner of `docs/`) | `docs/**` |
+| `reviewer` | subagent | Final user-facing HTML report | `work-area/reports/final-report-NNN.html` |
 | `ai-engineer` | primary | System debugger, RCA (NOT in pipeline) | — |
 
 **Owns-директории `coder-front` и `coder-back` в этой таблице — значения по умолчанию.** Точные зоны ответственности для конкретного проекта заданы в локальном `AGENTS.md` (секция «Назначение директорий»). Кодеры обязаны сверить свои Owns с локальным `AGENTS.md` перед началом работы.
@@ -21,6 +22,8 @@
 One artifact — one owner. Other agents may read, but must not modify without explicit Team Lead permission.
 
 **Task file ownership note:** Architect writes recommendations in `design.md`. Team Lead creates the actual `work-area/tasks/DEV-*.md` and `TEST-*.md` files. Architect must NOT create task files directly.
+
+**Baseline manifest ownership (WI-1):** `work-area/memory/baseline/manifest.json` is owned by **Team Lead** — it is the only role with write access to `work-area/memory/**`. Team Lead seeds it on the first cycle from PASSED P0/P1 tests and extends it via the deterministic rule in `memory-update` Step 0. Tester only *reads* and *runs* it, and must emit an explicit `⚠️ BASELINE ОТСУТСТВУЕТ` warning in `TR-NNN.md` when the manifest is missing or empty — a silently empty baseline means heuristics are validated by nothing.
 
 # How Skills Work (execution model) — READ FIRST
 
@@ -34,6 +37,8 @@ One artifact — one owner. Other agents may read, but must not modify without e
 
 **Карта навыков:** полный реестр навыков (назначение, кто вызывает, триггер, порядок, фолбэк) — в `skills/README.md`. Это источник истины по диспетчерскому слою; при добавлении/удалении навыка обнови карту (целостность проверяет `skills/check-skill-map.sh`).
 
+**Права на запись:** навык, который пишет файлы, объявляет пути полем `writes:` во front-matter. Соответствие «объявленные пути ↔ права всех вызывающих агентов» и «Owns из реестра ролей ↔ права владельца» проверяет `skills/check-artifact-permissions.sh`. Это единственная проверка, которая ловит расхождение «агенту предписано создать файл, а движок это запретит» — не полагайся на ревью диффа, такие дефекты в нём не видны.
+
 # Routing Rules (non-obvious constraints)
 
 - Team Lead is the single entry point for ALL user tasks.
@@ -44,6 +49,7 @@ One artifact — one owner. Other agents may read, but must not modify without e
 - DevOps fallback: if unreachable for 5 min, Team Lead pauses and escalates to user with 3 options (continue without, defer, user validates).
 - **Tester always runs before Guardian.** Guardian never starts without `TR-NNN.md` or an explicit partial-coverage note.
 - If Tester hangs or completes partially, Team Lead reads the partial artifact and decides SUFFICIENT/INSUFFICIENT via `incident-protocol` before handing to Guardian.
+- **Doc Keeper runs only after Guardian verdict ACCEPT + Team Lead decision, and before Reviewer.** It is the ONLY agent that may write to `docs/`. It never runs on REWORK or ESCALATE cycles — documenting code that is about to be rewritten is wasted spend.
 - **Reviewer runs only after Guardian verdict ACCEPT + Team Lead decision.** Reviewer does not make quality/architecture decisions.
 - Maximum **3 REWORK cycles** per task. On cycle 3, Team Lead escalates to user instead of starting another cycle.
 - **Plateau Detection** overrides the cycle counter: if cycle ≥2 shows stagnant tests, repeated critical findings, expanding affected zones, or no metric progress → switch variant or escalate immediately.
@@ -64,6 +70,8 @@ One artifact — one owner. Other agents may read, but must not modify without e
 - **Guardian** stops immediately on finding any BLOCKER in the security zone. The analysis is truncated with PARTIAL COMPLETION and verdict RECOMMEND REWORK.
 - **Guardian** always issues a RECOMMEND (ACCEPT/REWORK/ESCALATE), never a command. Final decision is Team Lead's.
 - **DevOps** in executor mode has a defined DoD: all requested files changed + `devops-status.md` updated + explicit "Окружение готово" / "Окружение не готово" message to Team Lead.
+- **`docs/` has exactly one writer: `doc-keeper`.** Architect and coders produce *material*, not documentation: Architect fills a "Материал для документации" section in `design.md`, coders fill an "Изменённые файлы" table in their task report. Neither may write to `docs/` — they have no permission for it, and a shell-side workaround would be scope creep caught by Guardian.
+- **Doc Keeper has `bash: deny`.** File-existence checks in `doc-update-module` use read/glob tools, not `ls`. It never needs a shell.
 - **ai-engineer** is a debugger, not in the pipeline. Invoke it for RCA when the system exhibits unexplained failures, loops, or incorrect routing. Provide traces, logs, prompts, and expected vs actual behavior.
 - **PSAO (prompt annotation):** when delegating with complexity ≥5, REWORK cycles, or critical constraints, Team Lead MUST apply PSAO annotations via `skill({ name: "psao-annotate" })` through `task-delegation-format`. PSAO wraps the delegation message in soft directives (`[критически важно]`, `[контекст: ...]`) that prevent semantic drift — loss of key constraints when an agent reads a long prompt. This is integrated at Step 3.5 (PSAO Gate) of `task-delegation-format`. Simple tasks (complexity 1-3, first cycle, no criticals) skip PSAO.
 - **Coders with change budget** always trigger PSAO Gate — their file boundary annotations prevent scope creep at the attention level, not just Guardian's retroactive check.
@@ -148,8 +156,9 @@ Key skill calls in order:
 | `coder-back` | ollama-cloud/kimi-k2.7-code | deny (project-specific — see local opencode.json) | allow (restricted) | deny |
 | `tester` | ollama-cloud/glm-5.1 | deny (test-results/**, tests/**) | allow (restricted) | deny |
 | `guardian` | ollama-cloud/minimax-m3 | deny (guardian-*.md) | allow (restricted) | deny |
-| `devops` | ollama-cloud/gemini-3-flash-preview | deny (devops-status.md, docker*, nginx.conf, Makefile, .env*) | allow (restricted) | deny |
-| `reviewer` | ollama-cloud/minimax-m2.7 | deny (final-report-*.md) | deny | deny |
+| `devops` | ollama-cloud/deepseek-v4-flash | deny (devops-status.md, docker*, nginx.conf, Makefile, .env*) | allow (restricted) | deny |
+| `doc-keeper` | ollama-cloud/minimax-m2.7 | deny (docs/**) | deny | deny |
+| `reviewer` | ollama-cloud/minimax-m2.7 | deny (final-report-*.html) | deny | deny |
 | `ai-engineer` | ollama-cloud/deepseek-v4-pro | ask | ask | ask |
 
 Agent definitions live in `agents/*.md`. Skills live in `skills/*/SKILL.md`.

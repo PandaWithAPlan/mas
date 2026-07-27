@@ -161,7 +161,7 @@
     },
 
     "devops": {
-      "model": "ollama-cloud/gemini-3-flash-preview",
+      "model": "ollama-cloud/deepseek-v4-flash",
       "permission": {
         "read": {
           "**/.env": "allow",
@@ -193,12 +193,24 @@
       }
     },
 
+    "doc-keeper": {
+      "model": "ollama-cloud/minimax-m2.7",
+      "permission": {
+        "edit": {
+          "*": "deny",
+          "docs/**": "allow"
+        },
+        "bash": "deny",
+        "webfetch": "deny"
+      }
+    },
+
     "reviewer": {
       "model": "ollama-cloud/minimax-m2.7",
       "permission": {
         "edit": {
           "*": "deny",
-          "work-area/reports/final-report-*.md": "allow"
+          "work-area/reports/final-report-*.html": "allow"
         },
         "bash": "deny",
         "webfetch": "deny"

@@ -3,6 +3,7 @@ name: memory-summarize
 description: MALMAS Summary-Agent: сжатие ProcMem + FeedMem → ConMem (conceptual.json → conceptual.md) + GlobalMem (global-memory.md) через LLM
 license: MIT
 compatibility: opencode
+writes: work-area/memory/**
 ---
 
 > ⚙️ **Это навык-инструкция, а не функция.** Вызов `skill({ name: "memory-summarize" })` один раз подгружает этот текст в твой контекст — у навыка нет отдельного исполнения, входных аргументов и возвращаемого значения. Прочитав процедуру, выполни её сам и встрой результат прямо в свой ответ или артефакт. Повторный вызов ради получения вывода — ошибка: ты снова получишь этот же текст.
