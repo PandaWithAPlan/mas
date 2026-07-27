@@ -70,7 +70,7 @@ rework_reason: "TEST-003 regression in payment" | null
 
 ## Шаг 2. Inject Memory (MALMAS Prompt Construction)
 
-MALMAS-паттерн (Dong et al., 2026, arXiv:2604.20261, Algorithm 1): prompt агента =
+MALMAS-паттерн: prompt агента =
 `metadata + FeedMem + ConMem + GlobalMem`.
 
 Перед формированием delegation message извлеки из памяти проекта контекст,

@@ -32,7 +32,8 @@ temperature: 0.1
 
 3. **Прочитай входные артефакты:**
    - `work-area/tasks/TEST-NNN.md` — твоя задача с тест-кейсами
-   - `work-area/tasks/DEV-FRONT-NNN.md` и `DEV-BACK-NNN.md` — отчёты кодеров (секции «Обнаруженные проблемы» и «API-контракты»)
+   - `work-area/reports/dev-report-FRONT-NNN.md` и `dev-report-BACK-NNN.md` — отчёты кодеров
+     (секции «Обнаруженные проблемы» и «Сверка API-контрактов»)
    - `work-area/docs/requirements.md` — DoD как главный критерий проверки
    - `work-area/docs/design.md` — интерфейсные контракты
    - `work-area/memory/global-memory.md` — контекст задачи и ограничения

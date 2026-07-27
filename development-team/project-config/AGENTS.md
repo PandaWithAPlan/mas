@@ -38,6 +38,8 @@ PROJECT_ROOT/
 ├── [ИНФРАСТРУКТУРА]/                   ← [владелец: devops]
 └── work-area/                          ← служебные артефакты агентного цикла
     ├── memory/                         ← вся память: владелец team-lead (единственный писатель)
+    │   ├── config.json                 ← ПОРОГИ ПАМЯТИ (ε, ярусы, рекомпакция): копия
+    │   │                                 project-config/memory-config.json; всем только на чтение
     │   ├── global-memory.md            ← точка входа: контекст задачи
     │   ├── conceptual.json             ← ЯРУСНЫЕ ЭВРИСТИКИ — ИСТОЧНИК ИСТИНЫ (WI-2/WI-3)
     │   ├── conceptual.md               ← читаемое представление conceptual.json; генерируется, вручную не править
@@ -58,6 +60,8 @@ PROJECT_ROOT/
     │   ├── DEV-BACK-NNN.md             ← team-lead → coder-back
     │   └── TEST-NNN.md                 ← team-lead → tester
     ├── reports/
+    │   ├── dev-report-FRONT-NNN.md     ← coder-front, цикл N (владелец — сам кодер)
+    │   ├── dev-report-BACK-NNN.md      ← coder-back, цикл N (владелец — сам кодер)
     │   ├── test-results/
     │   │   └── TR-NNN.md               ← tester, цикл N
     │   ├── guardian-NNN.md             ← guardian, цикл N
@@ -123,7 +127,8 @@ PROJECT_ROOT/
 Базовые MALMAS-правила (memory-retrieve первым шагом, memory-update после цикла, проверка
 procedural.json, использование feedback.json, ярусные эвристики, объективный якорь baseline) —
 см. глобальный `global-config/AGENTS.md`, секции «Memory (MALMAS Pattern)» и «MALMAS Rules».
-Числовые пороги и режимы памяти — в `memory-config.json`.
+Числовые пороги и режимы памяти — в `work-area/memory/config.json` (копия шаблона
+`project-config/memory-config.json`, разворачивается по CHECKLIST, Шаг 4.5).
 
 <!-- [ЗАПОЛНИТЬ] Локальные дополнения к работе с памятью, если они есть. Если нет — удали
      этот блок. Не дублируй сюда глобальные правила. -->
@@ -145,7 +150,10 @@ procedural.json, использование feedback.json, ярусные эвр
 <!-- [ЗАПОЛНИТЬ] Строки с FRONTEND_DIR и BACKEND_DIR замени на реальные директории.
      Должны совпадать с project-config/opencode.json → agent.coder-*.permission.edit. -->
 
-- `work-area/tasks/*.md` создаёт и актуализирует только `team-lead`.
+- `work-area/tasks/*.md` создаёт и актуализирует только `team-lead` — включая статус задачи.
+  Кодеры туда **не пишут**: каждый владеет своим отчётом
+  `work-area/reports/dev-report-FRONT-NNN.md` / `dev-report-BACK-NNN.md` и сообщает статус
+  сообщением, а Team Lead переносит его в task-файл.
 - `work-area/docs/*.md` принадлежат соответствующим агентам проектной команды.
 - `work-area/reports/test-results/TR-NNN.md` создаёт только `tester`.
 - `work-area/reports/guardian-NNN.md` создаёт только `guardian`.
@@ -153,6 +161,8 @@ procedural.json, использование feedback.json, ярусные эвр
 - `work-area/reports/final-report-NNN.html` создаёт только `reviewer`.
 - `docs/**` — вся проектная документация — принадлежит только `doc-keeper`. Ни Architect, ни кодеры туда не пишут: они готовят материал в своих артефактах.
 - `work-area/memory/**` (все слои памяти, включая `baseline/` и `snapshots/`) — владелец `team-lead`, единственный писатель.
+  Исключение — `work-area/memory/config.json`: он доступен всем только на чтение, у `team-lead` на него стоит явный `edit: deny`
+  (роль, применяющая пороги, не должна иметь возможности их переписать).
 - `coder-front` работает исключительно в: `[FRONTEND_DIR]/` (и только там).
 - `coder-back` работает исключительно в: `[BACKEND_DIR_1]/`, `[BACKEND_DIR_2]/`, ... (и только там).
 - Другие агенты могут читать артефакты, но не должны изменять их без явного указания Team Lead.
@@ -198,6 +208,9 @@ DevOps Gate обязателен согласно глобальным Routing R
 - `work-area/reports/devops-status.md` — статус инфраструктуры (Preflight Gate / изменения).
 - `work-area/reports/final-report-NNN.html` — пользовательский итоговый отчёт.
 - `work-area/sessions/` — журнал решений, циклов и инцидентов.
+- `work-area/reports/dev-report-FRONT-NNN.md`, `dev-report-BACK-NNN.md` — отчёты кодеров:
+  что сделано, сверка контрактов, отклонения, обнаруженные проблемы, «Изменённые файлы».
+- `work-area/memory/config.json` — числовые пороги подсистемы памяти; только на чтение.
 - `work-area/memory/global-memory.md` — точка входа: контекст задачи, ограничения, уроки.
 - `work-area/memory/conceptual.json` — ярусные эвристики с провенансом; **источник истины**.
 - `work-area/memory/conceptual.md` — читаемое представление `conceptual.json`; генерируется.

@@ -1,6 +1,6 @@
 # Чеклист адаптации development-team под проект
 
-Версия чеклиста: 1.9.0  
+Версия чеклиста: 1.10.0  
 Система: OpenCode Multi-Agent System (MALMAS)
 
 Используй этот документ при каждом переносе конфигурации на новый проект.
@@ -22,8 +22,9 @@ cp -r global-config/* ~/.config/opencode/
 python3 -c "import json; json.load(open('$HOME/.config/opencode/opencode.json')); print('OK')"
 ```
 
-После копирования в `~/.config/opencode/` окажутся `opencode.json`, `memory-config.json`,
-`AGENTS.md`, `agents/`, `skills/`. Подробности и настройка провайдера моделей —
+После копирования в `~/.config/opencode/` окажутся `opencode.json`, `AGENTS.md`,
+`agents/`, `skills/`. Параметры памяти в глобальный слой **не** входят: они
+разворачиваются в рабочий каталог проекта (Шаг 4.5). Подробности и настройка провайдера моделей —
 в README, раздел «Развёртывание».
 
 **Дальше по тексту** пути к линтерам даны от корня репозитория конфигурации
@@ -45,7 +46,8 @@ cp development-team/project-config/opencode.json /path/to/your-project/opencode.
 cp development-team/project-config/AGENTS.md     /path/to/your-project/AGENTS.md
 ```
 
-Оба файла нужно адаптировать перед запуском агентов.
+Оба файла нужно адаптировать перед запуском агентов. Третий файл шаблона,
+`memory-config.json`, копируется не в корень, а в рабочий каталог — см. Шаг 4.5.
 
 - [ ] `opencode.json` и `AGENTS.md` лежат в корне проекта (не во вложенной `project-config/`)
 
@@ -149,7 +151,7 @@ cp development-team/project-config/AGENTS.md     /path/to/your-project/AGENTS.md
 
 Секции **«Навыки (skills)»** и **«Память (MALMAS-паттерн)»** намеренно не содержат реестра:
 источник истины по навыкам — карта `skills/README.md`, по памяти — глобальный `AGENTS.md`
-и `memory-config.json`. Дублировать их в проектный файл не нужно — копия расходится
+и `work-area/memory/config.json`. Дублировать их в проектный файл не нужно — копия расходится
 с оригиналом и ничем не проверяется.
 
 - [ ] В «Навыках» перечислены **только** проектные отклонения от карты; если отклонений
@@ -171,7 +173,7 @@ cp development-team/project-config/AGENTS.md     /path/to/your-project/AGENTS.md
 ## Шаг 4 — Создать work-area/ в проекте
 
 Пути ниже соответствуют тем, что прописаны в `global-config/opencode.json`
-и `global-config/memory-config.json` (схема памяти MALMAS после WI-1…WI-6).
+и `project-config/memory-config.json` (схема памяти MALMAS после WI-1…WI-6).
 
 ```bash
 mkdir -p work-area/docs
@@ -228,7 +230,27 @@ touch work-area/memory/global-memory.md
 ```
 
 Снапшоты складываются в `work-area/memory/snapshots/cycle-NNN-.../`;
-глубина хранения — `snapshot_retention` в `memory-config.json` (по умолчанию 20).
+глубина хранения — `snapshot_retention` в `work-area/memory/config.json` (по умолчанию 20).
+
+### 4.5 Параметры памяти — обязательно в рабочий каталог
+
+Числовые пороги подсистемы памяти (ε, окно рекомпакции, кап и переходы ярусов,
+глубина снапшотов) читаются агентами **из рабочего каталога**, а не из глобального слоя.
+Причина — `permission.external_directory: "deny"`: всё за пределами рабочего каталога
+агенту недоступно на чтение. Конфиг, лежащий в `~/.config/opencode/`, был бы упомянут
+в семи местах и не прочитан ни разу, а пороги WI-3/WI-5 остались бы на усмотрение модели —
+ровно то, чего эти вехи должны были не допустить.
+
+```bash
+cp development-team/project-config/memory-config.json work-area/memory/config.json
+```
+
+Файл доступен агентам только на чтение: `team-lead` владеет `work-area/memory/**`,
+но для `config.json` в глобальном `opencode.json` стоит явный `edit: deny`. Роль,
+применяющая пороги, не должна иметь возможности их переписать.
+
+Правь значения в `work-area/memory/config.json` — они действуют на все навыки `memory-*`
+сразу. Шаблон в `project-config/` остаётся эталоном для следующих проектов.
 
 ### Чек-лист шага
 
@@ -238,6 +260,8 @@ touch work-area/memory/global-memory.md
 - [ ] `metrics.json` инициализирован как `[]`
 - [ ] `conceptual.md` и `global-memory.md` созданы (могут быть пустыми)
 - [ ] `changelog.jsonl` создан пустым
+- [ ] `work-area/memory/config.json` создан копией `project-config/memory-config.json`
+  (**без него пороги ε / ярусов / рекомпакции недостижимы для агентов**)
 - [ ] `baseline/manifest.json` **не** создавался вручную — его посеет `team-lead` после первого цикла
 - [ ] Проверено, что `sh global-config/skills/check-memory-provenance.sh` отрабатывает без падения (ожидаемо `SKIP` или `OK`)
 
@@ -246,6 +270,8 @@ touch work-area/memory/global-memory.md
 ## Шаг 5 — Проверить конфигурацию перед первым запуском
 
 - [ ] Нет оставшихся плейсхолдеров `[ЗАПОЛНИТЬ]`, `/path/to/`, `FRONTEND_DIR`, `BACKEND_DIR`
+- [ ] `work-area/memory/config.json` на месте и валиден:
+  `python3 -c "import json; json.load(open('work-area/memory/config.json')); print('OK')"`
 - [ ] `opencode.json` валиден. **Важно:** проектный `opencode.json` содержит комментарии `//`
   (формат JSONC), поэтому `python -m json.tool` / `json.load` на нём **упадёт** — это нормально.
   Проверяй его JSONC-валидатором (например, `npx jsonc-parser`) или просто запуском opencode.

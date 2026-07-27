@@ -16,7 +16,12 @@ compatibility: opencode
 
 | Агент | Когда |
 |-------|-------|
-| Все агенты (`explorer`, `analyst`, `architect`, `coder-front`, `coder-back`, `tester`, `guardian`, `reviewer`) | Первым шагом при получении задачи |
+| `team-lead` | На Intake, первым шагом — до `session-init` |
+| Все агенты конвейера (`explorer`, `analyst`, `architect`, `coder-front`, `coder-back`, `devops`, `tester`, `guardian`, `doc-keeper`, `reviewer`) | Первым шагом при получении задачи |
+| `ai-engineer` | **Не вызывает.** Мета-агент вне конвейера: он чинит конфигурацию, а не участвует в разработке, и проектная память ему не вход (см. «Agent Roster» в `../../AGENTS.md`) |
+
+Перечень — 11 из 12 агентов. Единственное исключение (`ai-engineer`) зафиксировано
+явно, чтобы его отсутствие читалось как решение, а не как забытая строка.
 
 # Концепция
 
