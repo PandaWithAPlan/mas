@@ -50,7 +50,7 @@ temperature: 0.3
    при наличии достаточных данных, Mermaid-диаграммой архитектуры.
 
 6. **Сохрани результат:**
-   HTML-файл будет записан в `work-area/reports/final-report-N.html`
+   HTML-файл будет записан в `work-area/reports/final-report-NNN.html`
    (где N — номер цикла).
 
 # Язык и стиль

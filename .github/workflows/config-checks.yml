@@ -31,6 +31,154 @@ jobs:
           python3 -c "import json; json.load(open('global-config/memory-config.json'))"
           echo "global-config/memory-config.json: OK"
 
+      # Проектный шаблон — JSONC (с комментариями //), строгий json.load на нём
+      # падает по замыслу. Но синтаксическая поломка шаблона, который копируют
+      # в каждый новый проект, не должна проходить в main незамеченной.
+      - name: Проектный opencode.json — валидный JSONC
+        run: |
+          python3 - <<'PY'
+          import json, re, sys
+
+          path = "project-config/opencode.json"
+          src = open(path, encoding="utf-8").read()
+
+          # Снимаем // -комментарии, не трогая слэши внутри строковых литералов.
+          out, i, in_str, esc = [], 0, False, False
+          while i < len(src):
+              c = src[i]
+              if in_str:
+                  out.append(c)
+                  if esc:            esc = False
+                  elif c == "\\":    esc = True
+                  elif c == '"':     in_str = False
+                  i += 1
+              elif c == '"':
+                  in_str = True; out.append(c); i += 1
+              elif src.startswith("//", i):
+                  while i < len(src) and src[i] != "\n":
+                      i += 1
+              elif src.startswith("/*", i):
+                  end = src.find("*/", i + 2)
+                  if end == -1:
+                      print("FAIL: незакрытый блочный комментарий", file=sys.stderr); sys.exit(1)
+                  i = end + 2
+              else:
+                  out.append(c); i += 1
+
+          stripped = "".join(out)
+          # Висячие запятые JSON не прощает — ловим их отдельным сообщением.
+          if re.search(r",\s*[}\]]", stripped):
+              print("FAIL: висячая запятая в %s" % path, file=sys.stderr); sys.exit(1)
+          try:
+              json.loads(stripped)
+          except json.JSONDecodeError as exc:
+              print("FAIL: %s невалиден как JSONC: %s" % (path, exc), file=sys.stderr); sys.exit(1)
+          print("%s: OK (JSONC)" % path)
+          PY
+
+      - name: Версии согласованы (VERSION ↔ CHECKLIST ↔ CHANGELOG)
+        run: |
+          python3 - <<'PY'
+          import re, sys
+
+          version = open("VERSION", encoding="utf-8").read().strip()
+
+          checklist = open("CHECKLIST.md", encoding="utf-8").read()
+          m = re.search(r"^Версия чеклиста:\s*([0-9]+\.[0-9]+\.[0-9]+)", checklist, re.M)
+          if not m:
+              print("FAIL: в CHECKLIST.md не найдена строка 'Версия чеклиста: X.Y.Z'", file=sys.stderr)
+              sys.exit(1)
+
+          changelog = open("CHANGELOG.md", encoding="utf-8").read()
+          c = re.search(r"^## \[([0-9]+\.[0-9]+\.[0-9]+)\]", changelog, re.M)
+          if not c:
+              print("FAIL: в CHANGELOG.md не найдена верхняя запись '## [X.Y.Z]'", file=sys.stderr)
+              sys.exit(1)
+
+          status = 0
+          if m.group(1) != version:
+              print("FAIL: VERSION=%s, а CHECKLIST.md заявляет %s" % (version, m.group(1)), file=sys.stderr)
+              status = 1
+          if c.group(1) != version:
+              print("FAIL: VERSION=%s, а верхняя запись CHANGELOG.md — %s" % (version, c.group(1)), file=sys.stderr)
+              status = 1
+          if status:
+              sys.exit(1)
+          print("Версии согласованы: %s" % version)
+          PY
+
+      - name: Ссылки на навыки из файлов агентов резолвятся
+        run: |
+          python3 - <<'PY'
+          import os, re, sys
+
+          skills = {d for d in os.listdir("global-config/skills")
+                    if os.path.isfile(os.path.join("global-config/skills", d, "SKILL.md"))}
+
+          status = 0
+          for root in ("global-config/agents", "global-config/skills"):
+              for dirpath, _, files in os.walk(root):
+                  for name in files:
+                      if not name.endswith(".md"):
+                          continue
+                      path = os.path.join(dirpath, name)
+                      src = open(path, encoding="utf-8").read()
+                      for ref in re.findall(r'skill\(\{\s*name:\s*"([^"]+)"', src):
+                          # <name> и подобное — иллюстрации в документации, не ссылки
+                          if not re.fullmatch(r"[a-z0-9-]+", ref):
+                              continue
+                          if ref not in skills:
+                              print("FAIL: %s ссылается на навык '%s', которого нет в skills/"
+                                    % (path, ref), file=sys.stderr)
+                              status = 1
+          if status:
+              sys.exit(1)
+          print("OK: все ссылки skill({ name: ... }) резолвятся в существующие навыки")
+          PY
+
+      - name: Единый формат front-matter у навыков
+        run: |
+          python3 - <<'PY'
+          import os, re, sys
+
+          status = 0
+          base = "global-config/skills"
+          for name in sorted(os.listdir(base)):
+              path = os.path.join(base, name, "SKILL.md")
+              if not os.path.isfile(path):
+                  continue
+              src = open(path, encoding="utf-8").read()
+              m = re.match(r"^---\n(.*?)\n---\n", src, re.S)
+              if not m:
+                  print("FAIL: %s — front-matter не распознан (нужен блок --- в самом начале файла)"
+                        % path, file=sys.stderr)
+                  status = 1
+                  continue
+              if any(not line.strip() for line in m.group(1).split("\n")):
+                  print("FAIL: %s — пустые строки внутри front-matter; строгие парсеры такой блок "
+                        "не разбирают, а на поле writes: держится линтер прав" % path, file=sys.stderr)
+                  status = 1
+              if not re.search(r"^name:\s*%s\s*$" % re.escape(name), m.group(1), re.M):
+                  print("FAIL: %s — поле name: не совпадает с именем каталога '%s'"
+                        % (path, name), file=sys.stderr)
+                  status = 1
+          if status:
+              sys.exit(1)
+          print("OK: front-matter всех навыков однороден и name совпадает с каталогом")
+          PY
+
+      - name: Конвенция именования артефактов (три цифры цикла)
+        run: |
+          set -eu
+          # Артефакты цикла нумеруются строго тремя цифрами (см. локальный AGENTS.md).
+          # Одиночный N перед расширением означает, что конвенция где-то разъехалась.
+          if grep -rnE '(final-report|guardian|TR|DEV-FRONT|DEV-BACK|TEST)-N(\.[a-z]+|\b)' \
+               global-config/ project-config/ | grep -v -- '-NNN'; then
+            echo "FAIL: найден одиночный N вместо NNN в имени артефакта цикла" >&2
+            exit 1
+          fi
+          echo "OK: конвенция NNN выдержана"
+
       - name: Целостность карты навыков
         run: sh global-config/skills/check-skill-map.sh
 

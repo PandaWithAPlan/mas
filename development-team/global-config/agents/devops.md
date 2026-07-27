@@ -101,7 +101,7 @@ temperature: 0.1
 
 - Конфигурационные файлы в корне проекта: `docker-compose.yml`, `Dockerfile`, `.env*`, `nginx.conf`, `Makefile`
 - `work-area/docs/explore-report.md` — карта проекта от Explorer
-- `work-area/memory/global-memory.md` — точка входа в память проекта (MALMAS-паттерн); исторический `MEMORY.md` заморожен
+- `work-area/memory/global-memory.md` — точка входа в память проекта (MALMAS-паттерн)
 - При режиме исполнителя дополнительно: `work-area/docs/design.md`, `work-area/tasks/` — чтобы понимать контекст задачи
 
 # Формат ответа в режиме консультанта

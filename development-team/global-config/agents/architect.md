@@ -31,7 +31,6 @@ Team Lead передаёт тебе:
 - `work-area/docs/explore-report.md` — карта проекта от Explorer;
 - `work-area/docs/requirements.md` — требования от Analyst;
 - `work-area/memory/global-memory.md` — точка входа в память проекта (MALMAS-паттерн);
-- исторический `work-area/memory/MEMORY.md` заморожен — читай global-memory.md вместо него;
 - `work-area/docs/design.md` — при повторном цикле, чтобы опираться на предыдущее решение;
 - `work-area/reports/guardian-*.md` — при повторном цикле, чтобы учесть замечания Guardian;
 - `work-area/reports/test-results/TR-*.md` — при повторном цикле, чтобы понять что не прошло тестирование.

@@ -61,22 +61,29 @@ def allow_globs(agent):
     return [g for g, v in edit.items() if v == "allow"]
 
 def glob_to_re(pattern):
-    """opencode-подобная семантика: ** пересекает /, * — нет."""
+    """Семантика движка opencode, а НЕ стандартный glob.
+
+    opencode использует простое wildcard-сопоставление: `*` разворачивается в
+    `.*` (то есть пересекает `/`), `?` — ровно один любой символ. Отдельной
+    конструкции globstar (`**`) нет — две звезды подряд ведут себя как одна.
+    Поэтому здесь не должно быть `[^/]*`: линтер, моделирующий glob строже
+    движка, даёт неверную картину широты выданных прав.
+    """
     out, i = "", 0
     while i < len(pattern):
         c = pattern[i]
-        if pattern.startswith("**", i):
+        if c == "*":
             out += ".*"
-            i += 2
-        elif c == "*":
-            out += "[^/]*"
             i += 1
         elif c == "?":
-            out += "[^/]"
+            out += "."
             i += 1
         else:
             out += re.escape(c)
             i += 1
+    # схлопываем `.*.*`, полученные из `**`, — на результат не влияет, но
+    # упрощает отладку скомпилированного шаблона
+    out = re.sub(r"(?:\.\*){2,}", ".*", out)
     return re.compile("^" + out + "$")
 
 def matches(path, pattern):
@@ -86,8 +93,6 @@ def sample_path(spec):
     """Превращает запись артефакта в конкретный путь для проверки."""
     p = spec.strip().strip("`").strip()
     p = p.replace("NNN", "001").replace("YYYY-MM-DD", "2026-01-01")
-    # final-report-N.html и подобные одиночные N перед расширением
-    p = re.sub(r"-N(\.[A-Za-z]+)$", r"-1\1", p)
     if p.endswith("/**"):
         return p[:-3] + "/sub/sample.md"
     if p.endswith("/*"):

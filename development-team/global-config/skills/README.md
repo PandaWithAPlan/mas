@@ -70,7 +70,7 @@ writes: docs/**
 | `guardian-severity` | Матрица severity (BLOCKER…INFO) для находок | `guardian` | Для каждого finding, перед записью | После `confidence-calibrate` | — |
 | `guardian-verdict` | Decision engine: severity + тесты → RECOMMEND ACCEPT/REWORK/ESCALATE | `guardian` | После классификации всех findings | После `guardian-severity` | P0 FAILED или BLOCKER → REWORK (непереопределяемо) |
 | `memory-update` | Обновить 3-слойную память после цикла | `team-lead` | После вердикта Guardian, перед ACCEPT/REWORK/ESCALATE | Делегирует `memory-summarize` | — |
-| `memory-summarize` | MALMAS Summary-Agent: ProcMem+FeedMem → ConMem + GlobalMem (LLM) | `team-lead` | Внутри `memory-update` | Вызывается из `memory-update` | — |
+| `memory-summarize` | MALMAS Summary-Agent: ProcMem+FeedMem → ConMem + GlobalMem (LLM) | `team-lead` (транзитивно, изнутри `memory-update`) | Внутри `memory-update`, после вердикта Guardian | Не вызывается напрямую из файла агента — только через `memory-update`, Шаг 4 | — |
 | `incident-protocol` | Протокол инцидентов: зависание / PARTIAL COMPLETION | `team-lead` | При зависании субагента или PARTIAL | — | Классификация → продолжить / сузить scope / эскалировать |
 | `task-metrics` | Сформировать и записать метрики задачи в `metrics.json` | `team-lead` | После ACCEPT или ESCALATE, перед закрытием | Финальный шаг задачи | — |
 | `doc-update-arch` | Обновить архитектурную документацию проекта | `doc-keeper` | После ACCEPT, если архитектура менялась | Вход — секция «Материал для документации» в `design.md` | Архитектура не менялась → только строка в «Историю решений» |

@@ -34,15 +34,21 @@ PROJECT_ROOT/
 ├── [ФРОНТЕНД ДИРЕКТОРИЯ]/              ← [владелец: coder-front]
 ├── [БЭКЕНД ДИРЕКТОРИЯ]/                ← [владелец: coder-back]
 ├── [ТЕСТЫ]/                            ← [владелец: tester / coder-back]
-├── [ДОКУМЕНТАЦИЯ]/                     ← [владелец: coder-back / reviewer]
+├── [ДОКУМЕНТАЦИЯ]/                     ← [владелец: doc-keeper — единственный]
 ├── [ИНФРАСТРУКТУРА]/                   ← [владелец: devops]
 └── work-area/                          ← служебные артефакты агентного цикла
-    ├── memory/
-    │   ├── global-memory.md            ← точка входа: контекст задачи (владелец: team-lead)
-    │   ├── conceptual.md               ← сжатые эвристики и уроки ≤10 (владелец: team-lead)
-    │   ├── procedural.json             ← хронология действий агентов (владелец: team-lead)
-    │   ├── feedback.json               ← результаты тестов и вердикты Guardian (владелец: team-lead)
-    │   └── metrics.json                ← итоговые метрики закрытых задач (владелец: team-lead)
+    ├── memory/                         ← вся память: владелец team-lead (единственный писатель)
+    │   ├── global-memory.md            ← точка входа: контекст задачи
+    │   ├── conceptual.json             ← ЯРУСНЫЕ ЭВРИСТИКИ — ИСТОЧНИК ИСТИНЫ (WI-2/WI-3)
+    │   ├── conceptual.md               ← читаемое представление conceptual.json; генерируется, вручную не править
+    │   ├── procedural.json             ← хронология действий агентов, объект с ключом history
+    │   ├── feedback.json               ← результаты тестов и вердикты Guardian, объект с ключом history
+    │   ├── metrics.json                ← итоговые метрики закрытых задач (массив)
+    │   ├── changelog.jsonl             ← журнал мутаций памяти, JSON Lines (WI-6)
+    │   ├── baseline/
+    │   │   └── manifest.json           ← объективный якорь: фиксированный регрессионный набор (WI-1)
+    │   └── snapshots/
+    │       └── cycle-NNN-.../          ← append-only снапшоты памяти по циклам (WI-6)
     ├── docs/
     │   ├── explore-report.md           ← артефакт explorer
     │   ├── requirements.md             ← артефакт analyst
@@ -91,44 +97,22 @@ PROJECT_ROOT/
 
 ## Навыки (skills)
 
-Навыки загружаются агентами через `skill({ name: "..." })`. Живут в `global-config/skills/`.
+Навыки загружаются агентами через `skill({ name: "..." })` и живут в глобальном слое
+(`~/.config/opencode/skills/`, в репозитории конфигурации — `global-config/skills/`).
 
-### Навыки памяти (MALMAS-паттерн)
+**Реестр навыков здесь не дублируется.** Единственный источник истины по диспетчерскому
+слою — карта навыков `skills/README.md` (назначение, кто вызывает, триггер, порядок,
+фолбэк); её целостность проверяет `skills/check-skill-map.sh`. Копия реестра в проектном
+файле неизбежно расходится с картой и ничем не проверяется, поэтому её здесь нет.
 
-| Навык | Потребители | Когда |
-|-------|------------|-------|
-| `memory-retrieve` | Все агенты (explorer, analyst, architect, coder-front, coder-back, tester, guardian, reviewer, devops, team-lead) | Первым шагом при получении задачи |
-| `memory-update` | `team-lead` | После завершения Guardian в каждом цикле |
-| `memory-summarize` | `team-lead` (вызывается из `memory-update`) | Сжатие ProcMem + FeedMem → ConMem + GlobalMem через LLM (MALMAS Summary-Agent) |
+Ниже — только **проектные отклонения** от карты, если они есть.
 
-### Навыки процесса
+<!-- [ЗАПОЛНИТЬ] Если в проекте какой-то навык применяется иначе, чем описано в карте
+     (например, doc-scan-rules не нужен, потому что каталога docs/ нет), — перечисли это
+     здесь одной строкой на отклонение. Если отклонений нет, удали список и напиши
+     «Отклонений от карты навыков нет». -->
 
-| Навык | Потребители | Когда |
-|-------|------------|-------|
-| `session-init` | `team-lead` | Intake: создание session-YYYY-MM-DD.md |
-| `complexity-parallel` | `team-lead` | После оценки сложности: конфигурация параллелизации агентов |
-| `devops-gate-check` | `team-lead`, `tester`, `coder-front`, `coder-back` | Перед операциями, потенциально зависящими от инфраструктуры |
-| `incident-protocol` | `team-lead` | При зависании субагента или PARTIAL COMPLETION |
-| `task-delegation-format` | `team-lead` | При каждой постановке задачи подчинённому агенту |
-| `psao-annotate` | `team-lead` | При делегировании с complexity ≥5, REWORK-циклах или critical constraints: PSAO-аннотирование промпта для предотвращения семантического дрейфа (Step 3.5 PSAO Gate внутри task-delegation-format) |
-| `task-metrics` | `team-lead` | После ACCEPT или ESCALATE: запись метрик в metrics.json |
-| `test-plan` | `tester` | Pre-flight: приоритизация тест-кейсов (P0/P1/P2) на основе affected zones и истории провалов |
-| `test-progress` | `tester` | После каждого тест-кейса / группы: самодиагностика — CONTINUE / SCOPE_REDUCE / STOP_PARTIAL |
-| `guardian-scope` | `guardian` | Pre-flight: приоритизированный план анализа (security → correctness → code_quality → tech_debt) |
-| `guardian-severity` | `guardian` | Для каждого finding: severity scoring по матрице BLOCKER/CRITICAL/SIGNIFICANT/MINOR/INFO |
-| `guardian-verdict` | `guardian` | Post-analysis: formal recommendation engine — RECOMMEND ACCEPT/REWORK/ESCALATE с reasoning |
-| `confidence-calibrate` | `guardian`, `architect` | Для каждого значимого finding/оценки: формальная калибровка уверенности 0–100% по 4 критериям |
-| `report-data-extract` | `reviewer` | Pre-flight: извлечение структурированных данных из всех артефактов задачи |
-| `html-report` | `reviewer` | После extract и doc-check: генерация HTML-отчёта с CSS, таблицами и Mermaid-диаграммами |
-
-### Навыки документирования
-
-| Навык | Потребители | Когда |
-|-------|------------|-------|
-| `doc-scan-rules` | `explorer` | При наличии папки `docs/`: сканирование состояния документации |
-| `doc-update-arch` | `doc-keeper` | После ACCEPT: обновление архитектурной документации по секции «Материал для документации» из design.md |
-| `doc-update-module` | `doc-keeper` | После ACCEPT: обновление документации модулей по разделу «Изменённые файлы» отчётов кодеров |
-| `doc-consistency-check` | `reviewer` | Перед финальным отчётом: проверка согласованности документации |
+- `[навык]` — [чем отличается применение в этом проекте и почему].
 
 ---
 
@@ -137,11 +121,12 @@ PROJECT_ROOT/
 ### Память (MALMAS-паттерн)
 
 Базовые MALMAS-правила (memory-retrieve первым шагом, memory-update после цикла, проверка
-procedural.json, использование feedback.json, эвристики conceptual.md) — см. глобальный
-`global-config/AGENTS.md`, секция «MALMAS Rules».
+procedural.json, использование feedback.json, ярусные эвристики, объективный якорь baseline) —
+см. глобальный `global-config/AGENTS.md`, секции «Memory (MALMAS Pattern)» и «MALMAS Rules».
+Числовые пороги и режимы памяти — в `memory-config.json`.
 
-Локальное дополнение:
-- `work-area/memory/MEMORY.md` заморожен. Новые знания фиксируются только через MALMAS-слои.
+<!-- [ЗАПОЛНИТЬ] Локальные дополнения к работе с памятью, если они есть. Если нет — удали
+     этот блок. Не дублируй сюда глобальные правила. -->
 
 ### Приоритет правил
 
@@ -149,7 +134,10 @@ procedural.json, использование feedback.json, эвристики co
 
 1. Глобальные правила (`global-config/AGENTS.md`) — orchestration, handoff, роли, жизненный цикл задачи.
 2. Локальные правила (этот файл) — зоны ответственности, конвенции, ограничения проекта.
-3. **Эвристики `conceptual.md`** — извлечённые уроки из предыдущих циклов. При конфликте с общим правилом эвристика имеет приоритет.
+3. **Эвристики из `conceptual.json` в ярусе `active`** — извлечённые уроки из предыдущих циклов.
+   При конфликте с общим правилом active-эвристика имеет приоритет. Ярус `provisional` — только
+   мягкий хинт, routing и scope не меняет; `archived` не применяется (WI-3).
+   `conceptual.md` — читаемое представление того же содержимого, не самостоятельный источник.
 4. **Контекст `global-memory.md`** — рекомендации для конкретных агентов на основе последнего цикла (секция «Для следующего агента»).
 
 ### Зоны ответственности
@@ -164,7 +152,7 @@ procedural.json, использование feedback.json, эвристики co
 - `work-area/reports/devops-status.md` создаёт и обновляет `devops` в режиме Preflight Gate.
 - `work-area/reports/final-report-NNN.html` создаёт только `reviewer`.
 - `docs/**` — вся проектная документация — принадлежит только `doc-keeper`. Ни Architect, ни кодеры туда не пишут: они готовят материал в своих артефактах.
-- `work-area/memory/*` (все файлы памяти, кроме MEMORY.md) — владелец `team-lead`.
+- `work-area/memory/**` (все слои памяти, включая `baseline/` и `snapshots/`) — владелец `team-lead`, единственный писатель.
 - `coder-front` работает исключительно в: `[FRONTEND_DIR]/` (и только там).
 - `coder-back` работает исключительно в: `[BACKEND_DIR_1]/`, `[BACKEND_DIR_2]/`, ... (и только там).
 - Другие агенты могут читать артефакты, но не должны изменять их без явного указания Team Lead.
@@ -194,10 +182,15 @@ DevOps Gate обязателен согласно глобальным Routing R
 
 ## Разграничение артефактов
 
-<!-- Этот раздел не требует адаптации — он описывает стандартную структуру work-area. -->
+<!-- Этот раздел не требует адаптации — он описывает стандартную структуру work-area.
+     Каталоги документации и тестов самого проекта названы в «Назначении директорий». -->
 
-- `[DOCS_DIR]/` — документация проекта и продукта (не артефакты агентного цикла).
-- `[TESTS_DIR]/` — тестовый код проекта (не отчёты Tester).
+Каталоги **самого проекта** — документация и тестовый код (см. «Назначение директорий») —
+это не артефакты агентного цикла: документация принадлежит `doc-keeper`, тестовый код —
+кодерам, а отчёты Tester живут отдельно, в `work-area/reports/test-results/`.
+
+Служебные артефакты цикла:
+
 - `work-area/docs/` — служебные артефакты проектного цикла (explore-report, requirements, design).
 - `work-area/tasks/` — задачи на реализацию и тестирование.
 - `work-area/reports/test-results/` — результаты функционального тестирования.
@@ -206,11 +199,14 @@ DevOps Gate обязателен согласно глобальным Routing R
 - `work-area/reports/final-report-NNN.html` — пользовательский итоговый отчёт.
 - `work-area/sessions/` — журнал решений, циклов и инцидентов.
 - `work-area/memory/global-memory.md` — точка входа: контекст задачи, ограничения, уроки.
-- `work-area/memory/conceptual.md` — сжатые эвристики и извлечённые уроки.
+- `work-area/memory/conceptual.json` — ярусные эвристики с провенансом; **источник истины**.
+- `work-area/memory/conceptual.md` — читаемое представление `conceptual.json`; генерируется.
 - `work-area/memory/procedural.json` — машиночитаемая хронология действий агентов.
 - `work-area/memory/feedback.json` — связка тест→вердикт→зоны в машиночитаемой форме.
 - `work-area/memory/metrics.json` — агрегированные метрики закрытых задач.
-- `work-area/memory/MEMORY.md` — ⚠ ЗАМОРОЖЕН (заменён MALMAS-слоями).
+- `work-area/memory/changelog.jsonl` — журнал мутаций памяти (WI-6).
+- `work-area/memory/baseline/manifest.json` — объективный якорь: фиксированный регрессионный набор (WI-1).
+- `work-area/memory/snapshots/` — снапшоты памяти по циклам (WI-6).
 
 ## Локальные ограничения
 
