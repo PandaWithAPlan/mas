@@ -26,7 +26,8 @@
           "*": "deny",
           "work-area/sessions/**": "allow",
           "work-area/tasks/**": "allow",
-          "work-area/memory/**": "allow"
+          "work-area/memory/**": "allow",
+          "work-area/memory/config.json": "deny"
         },
         "bash": "deny",
         "webfetch": "deny"
@@ -73,7 +74,8 @@
       "model": "ollama-cloud/kimi-k2.7-code",
       "permission": {
         "edit": {
-          "*": "deny"
+          "*": "deny",
+          "work-area/reports/dev-report-FRONT-*.md": "allow"
         },
         "bash": {
           "*": "allow",
@@ -95,7 +97,8 @@
       "model": "ollama-cloud/kimi-k2.7-code",
       "permission": {
         "edit": {
-          "*": "deny"
+          "*": "deny",
+          "work-area/reports/dev-report-BACK-*.md": "allow"
         },
         "bash": {
           "*": "allow",

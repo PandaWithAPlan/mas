@@ -79,7 +79,7 @@ Baseline никогда не сокращается ради ускорения 
 
 Прочитай:
 - `work-area/sessions/session-YYYY-MM-DD.md` — хронология цикла
-- `work-area/tasks/DEV-FRONT-NNN.md` и `work-area/tasks/DEV-BACK-NNN.md` — отчёты кодеров
+- `work-area/reports/dev-report-FRONT-NNN.md` и `work-area/reports/dev-report-BACK-NNN.md` — отчёты кодеров
 - `work-area/reports/test-results/TR-NNN.md` — результаты тестирования
 - `work-area/reports/guardian-NNN.md` — заключение Guardian
 
@@ -205,7 +205,7 @@ Baseline никогда не сокращается ради ускорения 
 
 ## Шаг 4. Обновить Conceptual Memory (MALMAS Summary-Agent)
 
-Вместо ручного написания эвристик используй MALMAS-паттерн (Dong et al., 2026, arXiv:2604.20261):
+Вместо ручного написания эвристик используй MALMAS-паттерн:
 `ConMem = LLM(ProcMem, FeedMem)`.
 
 **Источник истины концептуальной памяти — `conceptual.json` (WI-2), а не Markdown.**
@@ -222,7 +222,7 @@ Baseline никогда не сокращается ради ускорения 
    - `task_id` — DEV-XXX
    - `existing_conceptual` — содержимое `conceptual.json` (если существует)
    - `mode` — `incremental` | `recompact` (WI-4). Выбирается по правилу из
-     `memory-config.json` → `recompaction`: `recompact`, если с последней рекомпакции
+     `work-area/memory/config.json` → `recompaction`: `recompact`, если с последней рекомпакции
      прошло ≥ `window_N` циклов **или** сработал `drift_trigger`; иначе `incremental`.
      В режиме `recompact` `existing_conceptual` навыку **не передаётся** (stateless-проход).
 
@@ -255,12 +255,14 @@ Baseline никогда не сокращается ради ускорения 
       "id": "AUTH-PAYMENT-COUPLING",
       "rule": "любое изменение auth требует регрессионной проверки payment",
       "agent": "coder-back",
+      "zones": ["src/auth/", "src/payment/"],
       "tier": "active",
       "evidence": ["find-a1b2c3", "find-d4e5f6"],
       "confidence": 0.8,
       "falsification_condition": "baseline-тесты payment проходят при изменении auth в течение K циклов",
       "created_cycle": 1,
       "last_confirmed_cycle": 3,
+      "_": "last_confirmed_cycle ведёт устаревание (tiers.staleness_cycles), zones — инвалидацию по перезаписи (tiers.zone_invalidation); оба правила в memory-summarize, Шаг 3.5",
       "last_tested_cycle": 3,
       "confirm_count": 2,
       "refute_count": 0
@@ -391,7 +393,7 @@ Baseline никогда не сокращается ради ускорения 
 
 Память без аудиторского следа нельзя ни проверить, ни откатить. Перед завершением
 цикла зафиксируй **снапшот** состояния памяти и **запись в журнал** на каждую
-мутацию. Параметры — в `memory-config.json` → `versioning`.
+мутацию. Параметры — в `work-area/memory/config.json` → `versioning`.
 
 ### 5.5a. Снапшот состояния
 
@@ -415,7 +417,9 @@ Baseline никогда не сокращается ради ускорения 
 
 Правила:
 - `mutation` — тип изменения. `rule` — **детерминированное правило**, по которому
-  принято решение (например, `confirm_count>=M`, `refute_count>=K`, `active_cap_overflow`),
+  принято решение. Допустимый словарь: `confirm_count>=M`, `refute_count>=K`,
+  `active_cap_overflow`, `stale` (устаревание по `tiers.staleness_cycles`),
+  `zone_rewritten` (инвалидация по перезаписи зоны), `recompact`. Правило —
   а **не** «на усмотрение LLM». Если правило не формализуемо — это сигнал, что
   мутация неправомерна (см. WI-3).
 - `reason` — человекочитаемое пояснение со ссылкой на конкретные циклы/наблюдения.

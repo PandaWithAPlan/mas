@@ -39,10 +39,30 @@ def fail(msg):
     print("FAIL: " + msg, file=sys.stderr)
     status = 1
 
-# Роли, у которых привязка edit к путям задаётся НЕ в глобальном конфиге.
-# coder-*  — зоны исходников определяет проектный opencode.json (fail-fast по замыслу);
-# ai-engineer — права "ask" без привязки к путям.
-EXEMPT = {"coder-front", "coder-back", "ai-engineer"}
+# Исключения из проверки. Важное различие, на котором держится корректность линтера:
+# исключать нужно ПУТЬ, а не АГЕНТА.
+#
+#   EXEMPT_AGENTS  — роли, у которых edit вообще не привязан к путям (строковое "ask"),
+#                    проверять нечего ни по какому пути.
+#   PROJECT_SCOPED — роли, часть путей которых определяет проектный opencode.json.
+#                    Их зоны исходников в глобальном слое действительно непроверяемы —
+#                    но только они. Всё, что лежит под work-area/, задано глобально,
+#                    от проекта не зависит и обязано проверяться у всех без изъятия.
+#
+# Раньше здесь было одно множество на всех, и кодеры выпадали из проверки целиком —
+# включая work-area/. Из-за этого предписанный кодеру отчёт, писать который движок ему
+# запрещал, три диагностики подряд проходил мимо линтера, написанного ровно для этого
+# класса дефектов.
+EXEMPT_AGENTS = {"ai-engineer"}
+PROJECT_SCOPED = {"coder-front", "coder-back"}
+GLOBAL_PREFIX = "work-area/"
+
+
+def skip(agent, spec):
+    """Нужно ли пропустить пару (агент, путь) как непроверяемую в глобальном слое."""
+    if agent in EXEMPT_AGENTS:
+        return True
+    return agent in PROJECT_SCOPED and not spec.startswith(GLOBAL_PREFIX)
 
 try:
     with open(config_path, encoding="utf-8") as fh:
@@ -122,7 +142,7 @@ for line in roster_src.splitlines():
     if not m:
         continue
     agent, _, owns = m.group(1), m.group(2), m.group(3)
-    if agent in EXEMPT:
+    if agent in EXEMPT_AGENTS:
         continue
     if agent not in agents:
         fail("реестр AGENTS.md содержит агента '%s', которого нет в opencode.json" % agent)
@@ -130,6 +150,8 @@ for line in roster_src.splitlines():
     for spec in owns.split(","):
         spec = spec.strip().strip("`").strip()
         if not spec or spec in ("—", "-"):
+            continue
+        if skip(agent, spec):
             continue
         ok, path = writable_by(agent, spec)
         checked_a += 1
@@ -140,7 +162,7 @@ for line in roster_src.splitlines():
 
 # Агенты в конфиге, отсутствующие в реестре
 for agent in agents:
-    if agent in EXEMPT:
+    if agent in EXEMPT_AGENTS:
         continue
     if not re.search(r"^\|\s*`" + re.escape(agent) + r"`\s*\|", roster_src, re.M):
         fail("агент '%s' есть в opencode.json, но отсутствует в реестре AGENTS.md" % agent)
@@ -181,9 +203,11 @@ for name in sorted(os.listdir(skills_dir)):
         fail("навык '%s' объявляет writes, но в карте не указан ни один вызывающий агент" % name)
         continue
     for agent in who:
-        if agent in EXEMPT or agent not in agents:
+        if agent not in agents:
             continue
         for spec in targets:
+            if skip(agent, spec):
+                continue
             ok, path = writable_by(agent, spec)
             checked_b += 1
             if not ok:

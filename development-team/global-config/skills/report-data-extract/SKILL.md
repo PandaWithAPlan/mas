@@ -36,8 +36,8 @@ cycle: N                            // номер финального цикл�
 session_path: "work-area/sessions/session-YYYY-MM-DD.md"
 requirements_path: "work-area/docs/requirements.md"
 design_path: "work-area/docs/design.md"
-dev_front_path: "work-area/tasks/DEV-FRONT-NNN.md" | null
-dev_back_path: "work-area/tasks/DEV-BACK-NNN.md" | null
+dev_front_path: "work-area/reports/dev-report-FRONT-NNN.md" | null
+dev_back_path: "work-area/reports/dev-report-BACK-NNN.md" | null
 tr_path: "work-area/reports/test-results/TR-NNN.md"
 guardian_path: "work-area/reports/guardian-NNN.md"
 ```
@@ -188,7 +188,7 @@ guardian: {
 {
   "report_title": "Итоговый отчёт — Добавление OAuth2-логина",
   "generated_at": "2026-05-14 15:30",
-  "data_sources_used": ["requirements.md", "design.md", "DEV-BACK-001.md", "TR-002.md", "guardian-002.md"],
+  "data_sources_used": ["requirements.md", "design.md", "dev-report-BACK-001.md", "TR-002.md", "guardian-002.md"],
   "data_sources_missing": [],
   
   "summary": {
