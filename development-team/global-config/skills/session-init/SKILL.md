@@ -3,6 +3,7 @@ name: session-init
 description: Инициализация и ведение журнала рабочей сессии
 license: MIT
 compatibility: opencode
+writes: work-area/sessions/**
 ---
 
 > ⚙️ **Это навык-инструкция, а не функция.** Вызов `skill({ name: "session-init" })` один раз подгружает этот текст в твой контекст — у навыка нет отдельного исполнения, входных аргументов и возвращаемого значения. Прочитав процедуру, выполни её сам и встрой результат прямо в свой ответ или артефакт. Повторный вызов ради получения вывода — ошибка: ты снова получишь этот же текст.
@@ -75,7 +76,7 @@ compatibility: opencode
 | HH:MM | guardian | Запущен | IN PROGRESS |
 | HH:MM | guardian | Завершён — вердикт ACCEPT / REWORK | — |
 | HH:MM | reviewer | Запущен — финальный отчёт | IN PROGRESS |
-| HH:MM | reviewer | Завершён — final-report-NNN.md | DONE |
+| HH:MM | reviewer | Завершён — final-report-NNN.html | DONE |
 | HH:MM | team-lead | Задача закрыта — ACCEPT | ✓ |
 
 ## Журнал циклов доработки
@@ -110,7 +111,7 @@ compatibility: opencode
 ## Итоговый статус
 - **Задача:** ACCEPTED / ESCALATED
 - **Дата закрытия:** YYYY-MM-DD HH:MM
-- **Финальный отчёт:** work-area/reports/final-report-NNN.md
+- **Финальный отчёт:** work-area/reports/final-report-NNN.html
 ```
 
 # Правила заполнения

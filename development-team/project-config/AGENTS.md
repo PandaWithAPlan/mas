@@ -56,7 +56,7 @@ PROJECT_ROOT/
     │   │   └── TR-NNN.md               ← tester, цикл N
     │   ├── guardian-NNN.md             ← guardian, цикл N
     │   ├── devops-status.md            ← devops, preflight gate / инфраструктурные изменения
-    │   └── final-report-NNN.md         ← reviewer, итоговый отчёт
+    │   └── final-report-NNN.html         ← reviewer, итоговый отчёт
     └── sessions/
         └── session-YYYY-MM-DD.md       ← журнал текущей и прошлых сессий (владелец: team-lead)
 ```
@@ -126,8 +126,8 @@ PROJECT_ROOT/
 | Навык | Потребители | Когда |
 |-------|------------|-------|
 | `doc-scan-rules` | `explorer` | При наличии папки `docs/`: сканирование состояния документации |
-| `doc-update-arch` | `architect` | После финализации design.md: обновление архитектурной документации |
-| `doc-update-module` | `coder-front`, `coder-back` | После завершения реализации: обновление документации изменённых модулей |
+| `doc-update-arch` | `doc-keeper` | После ACCEPT: обновление архитектурной документации по секции «Материал для документации» из design.md |
+| `doc-update-module` | `doc-keeper` | После ACCEPT: обновление документации модулей по разделу «Изменённые файлы» отчётов кодеров |
 | `doc-consistency-check` | `reviewer` | Перед финальным отчётом: проверка согласованности документации |
 
 ---
@@ -162,7 +162,8 @@ procedural.json, использование feedback.json, эвристики co
 - `work-area/reports/test-results/TR-NNN.md` создаёт только `tester`.
 - `work-area/reports/guardian-NNN.md` создаёт только `guardian`.
 - `work-area/reports/devops-status.md` создаёт и обновляет `devops` в режиме Preflight Gate.
-- `work-area/reports/final-report-NNN.md` создаёт только `reviewer`.
+- `work-area/reports/final-report-NNN.html` создаёт только `reviewer`.
+- `docs/**` — вся проектная документация — принадлежит только `doc-keeper`. Ни Architect, ни кодеры туда не пишут: они готовят материал в своих артефактах.
 - `work-area/memory/*` (все файлы памяти, кроме MEMORY.md) — владелец `team-lead`.
 - `coder-front` работает исключительно в: `[FRONTEND_DIR]/` (и только там).
 - `coder-back` работает исключительно в: `[BACKEND_DIR_1]/`, `[BACKEND_DIR_2]/`, ... (и только там).
@@ -180,7 +181,7 @@ DevOps Gate обязателен согласно глобальным Routing R
 
 - **Все новые артефакты используют строго 3-значный номер цикла (`NNN`):**
   - `DEV-FRONT-NNN.md`, `DEV-BACK-NNN.md`, `TEST-NNN.md`
-  - `TR-NNN.md`, `guardian-NNN.md`, `final-report-NNN.md`
+  - `TR-NNN.md`, `guardian-NNN.md`, `final-report-NNN.html`
   - `session-YYYY-MM-DD.md` (без номера цикла)
 - **Суффиксы `-retry`, `-diagnostic` и даты в именах отчётов запрещены.** При повторном запуске агента в том же цикле — перезапись существующего артефакта (с пометкой в `procedural.json`).
 - **`work-area/docs/` содержит только 3 канонических файла:** `explore-report.md`, `requirements.md`, `design.md`. При параллельных задачах Team Lead создаёт отдельные сессии.
@@ -202,7 +203,7 @@ DevOps Gate обязателен согласно глобальным Routing R
 - `work-area/reports/test-results/` — результаты функционального тестирования.
 - `work-area/reports/guardian-NNN.md` — инженерное заключение по качеству и безопасности.
 - `work-area/reports/devops-status.md` — статус инфраструктуры (Preflight Gate / изменения).
-- `work-area/reports/final-report-NNN.md` — пользовательский итоговый отчёт.
+- `work-area/reports/final-report-NNN.html` — пользовательский итоговый отчёт.
 - `work-area/sessions/` — журнал решений, циклов и инцидентов.
 - `work-area/memory/global-memory.md` — точка входа: контекст задачи, ограничения, уроки.
 - `work-area/memory/conceptual.md` — сжатые эвристики и извлечённые уроки.
