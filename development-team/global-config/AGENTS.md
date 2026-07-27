@@ -6,22 +6,32 @@
 | `explorer` | subagent | Codebase mapping, dependency graph | `work-area/docs/explore-report.md` |
 | `analyst` | subagent | Requirements, acceptance criteria, gaps | `work-area/docs/requirements.md` |
 | `architect` | subagent | Solution design, decomposition, contracts | `work-area/docs/design.md` |
-| `coder-front` | subagent | Frontend implementation | `src/frontend/` |
-| `coder-back` | subagent | Backend implementation | `src/backend/` |
+| `coder-front` | subagent | Frontend implementation | `src/frontend/`, `work-area/reports/dev-report-FRONT-NNN.md` |
+| `coder-back` | subagent | Backend implementation | `src/backend/`, `work-area/reports/dev-report-BACK-NNN.md` |
 | `tester` | subagent | Functional testing, regression, boundary | `work-area/reports/test-results/TR-NNN.md` |
 | `guardian` | subagent | Quality, security, correctness audit | `work-area/reports/guardian-NNN.md` |
 | `devops` | subagent | Infrastructure consultant + executor | `work-area/reports/devops-status.md` |
 | `doc-keeper` | subagent | Project documentation upkeep (sole owner of `docs/`) | `docs/**` |
 | `reviewer` | subagent | Final user-facing HTML report | `work-area/reports/final-report-NNN.html` |
-| `ai-engineer` | primary | System debugger, RCA (NOT in pipeline) | — |
+| `ai-engineer` | primary | **Мета-агент.** Правит конфигурацию системы и файлы агентов, ведёт RCA. НЕ участвует в разработке и НЕ входит в конвейер | — |
 
-**Owns-директории `coder-front` и `coder-back` в этой таблице — значения по умолчанию.** Точные зоны ответственности для конкретного проекта заданы в локальном `AGENTS.md` (секция «Назначение директорий»). Кодеры обязаны сверить свои Owns с локальным `AGENTS.md` перед началом работы.
+**Только зоны исходников (`src/frontend/`, `src/backend/`) у `coder-front` и `coder-back` —
+значения по умолчанию.** Точные зоны ответственности для конкретного проекта заданы в локальном `AGENTS.md` (секция «Назначение директорий»). Кодеры обязаны сверить свои Owns с локальным `AGENTS.md` перед началом работы.
+Артефакт отчёта (`work-area/reports/dev-report-*-NNN.md`) от проекта **не** зависит:
+он задан глобально, разрешён в глобальном `opencode.json` и проверяется линтером.
 
 # Artifact Ownership
 
 One artifact — one owner. Other agents may read, but must not modify without explicit Team Lead permission.
 
 **Task file ownership note:** Architect writes recommendations in `design.md`. Team Lead creates the actual `work-area/tasks/DEV-*.md` and `TEST-*.md` files. Architect must NOT create task files directly.
+
+**Coder report ownership:** `work-area/tasks/**` has exactly one writer — Team Lead. Coders
+never append to their DEV task file; each coder owns a separate artifact
+(`work-area/reports/dev-report-FRONT-NNN.md` / `dev-report-BACK-NNN.md`) and reports status
+to Team Lead in its final message. Team Lead reads that report and sets the task status
+itself. This keeps one artifact — one owner, and keeps coders off the shell-write path that
+Guardian's Scope Compliance would flag.
 
 **Baseline manifest ownership (WI-1):** `work-area/memory/baseline/manifest.json` is owned by **Team Lead** — it is the only role with write access to `work-area/memory/**`. Team Lead seeds it on the first cycle from PASSED P0/P1 tests and extends it via the deterministic rule in `memory-update` Step 0. Tester only *reads* and *runs* it, and must emit an explicit `⚠️ BASELINE ОТСУТСТВУЕТ` warning in `TR-NNN.md` when the manifest is missing or empty — a silently empty baseline means heuristics are validated by nothing.
 
@@ -70,9 +80,9 @@ One artifact — one owner. Other agents may read, but must not modify without e
 - **Guardian** stops immediately on finding any BLOCKER in the security zone. The analysis is truncated with PARTIAL COMPLETION and verdict RECOMMEND REWORK.
 - **Guardian** always issues a RECOMMEND (ACCEPT/REWORK/ESCALATE), never a command. Final decision is Team Lead's.
 - **DevOps** in executor mode has a defined DoD: all requested files changed + `devops-status.md` updated + explicit "Окружение готово" / "Окружение не готово" message to Team Lead.
-- **`docs/` has exactly one writer: `doc-keeper`.** Architect and coders produce *material*, not documentation: Architect fills a "Материал для документации" section in `design.md`, coders fill an "Изменённые файлы" table in their task report. Neither may write to `docs/` — they have no permission for it, and a shell-side workaround would be scope creep caught by Guardian.
+- **`docs/` has exactly one writer: `doc-keeper`.** Architect and coders produce *material*, not documentation: Architect fills a "Материал для документации" section in `design.md`, coders fill an "Изменённые файлы" table in their own report (`work-area/reports/dev-report-FRONT-NNN.md` / `dev-report-BACK-NNN.md`). Neither may write to `docs/` — they have no permission for it, and a shell-side workaround would be scope creep caught by Guardian.
 - **Doc Keeper has `bash: deny`.** File-existence checks in `doc-update-module` use read/glob tools, not `ls`. It never needs a shell.
-- **ai-engineer** is a debugger, not in the pipeline. Invoke it for RCA when the system exhibits unexplained failures, loops, or incorrect routing. Provide traces, logs, prompts, and expected vs actual behavior.
+- **ai-engineer is a meta-agent, not a developer.** Its object of work is the system itself — `opencode.json`, `AGENTS.md`, agent files, skills — not the project's source code. Invoke it to adapt the config to a new project, or for RCA when the system exhibits unexplained failures, loops, or incorrect routing; provide traces, logs, prompts, and expected vs actual behavior. Consequences of that status, all intentional: it stands outside the pipeline, it calls no skills (including `memory-retrieve`), its permissions are `ask` on everything rather than path-bound, and the artifact-permission linter exempts it because there are no paths to check.
 - **PSAO (prompt annotation):** when delegating with complexity ≥5, REWORK cycles, or critical constraints, Team Lead MUST apply PSAO annotations via `skill({ name: "psao-annotate" })` through `task-delegation-format`. PSAO wraps the delegation message in soft directives (`[критически важно]`, `[контекст: ...]`) that prevent semantic drift — loss of key constraints when an agent reads a long prompt. This is integrated at Step 3.5 (PSAO Gate) of `task-delegation-format`. Simple tasks (complexity 1-3, first cycle, no criticals) skip PSAO.
 - **Coders with change budget** always trigger PSAO Gate — their file boundary annotations prevent scope creep at the attention level, not just Guardian's retroactive check.
 
@@ -93,17 +103,27 @@ Three-layer project memory, updated by Team Lead via `memory-update` → `memory
 
 **Global Memory** (`work-area/memory/global-memory.md`) — consolidated task context read by all agents before starting. Generated by `memory-summarize`.
 
-**Versioning & audit (WI-6):** every `memory-update` writes an append-only snapshot to `work-area/memory/snapshots/cycle-NNN-.../` and one line per mutation to `work-area/memory/changelog.jsonl` (what was added/promoted/demoted/archived and the deterministic rule + reason). This enables diffing memory between any two cycles and rollback to a known-good state. Numeric thresholds and modes for the whole memory subsystem live in `memory-config.json` (a standalone file, not part of the opencode schema).
+**Versioning & audit (WI-6):** every `memory-update` writes an append-only snapshot to `work-area/memory/snapshots/cycle-NNN-.../` and one line per mutation to `work-area/memory/changelog.jsonl` (what was added/promoted/demoted/archived and the deterministic rule + reason). This enables diffing memory between any two cycles and rollback to a known-good state. Numeric thresholds and modes for the whole memory subsystem live in `work-area/memory/config.json` — a standalone file inside the project work area, not part of the opencode schema. It sits in the work area on purpose: `external_directory: deny` makes anything outside it unreadable to agents, so a config kept in `~/.config/opencode/` would be referenced by every memory skill and read by none. Team Lead owns `work-area/memory/**` but has an explicit `edit` deny on `config.json` — the role that applies the thresholds must not be able to rewrite them.
 
-# MALMAS: attribution & domain adaptations (WI-9)
+# Two named techniques, two different jobs — do not conflate (WI-9)
 
-**Attribution.** MALMAS = **Dong et al., 2026** (arXiv:2604.20261, *Memory-Augmented
-LLM-based Multi-Agent System for Automated Feature Generation on Tabular Data*). Earlier
-docs miscited it as "Zhang et al., 2024" — that is the *golden-features* work MALMAS
-*references*, not MALMAS itself. Cite Zhang et al., 2024 only for golden-feature
-categorization, never for MALMAS.
+The configuration borrows two techniques from research. They are unrelated, they solve
+different problems, and each is referred to **by its abbreviation only** — no author-year
+citations anywhere in the config. Author-year strings were the single largest source of
+confusion across three diagnostics: the same one had been attached to both techniques,
+so every reader (human or agent) had to re-derive which was which.
 
-**What is ported exactly vs adapted.** MALMAS optimizes *diversity* (exploration of
+| Abbreviation | What it is | Where it lives | Who applies it |
+|---|---|---|---|
+| **MALMAS** | Three-layer project memory (procedural / feedback / conceptual) + GlobalMem + a Router that picks an agent subset per cycle | `work-area/memory/**`, skills `memory-retrieve` / `memory-update` / `memory-summarize`, Routing Intelligence in `team-lead` | `team-lead` writes and summarizes; every pipeline agent reads |
+| **PSAO** | Prompt Segmentation and Annotation Optimisation — segmenting a delegation prompt and attaching soft directives (`[критически важно]`, `[контекст: ...]`) to resist semantic drift | skill `psao-annotate`, invoked from `task-delegation-format` Step 3.5 | `team-lead`, transitively, when delegating |
+
+**MALMAS is about what the system remembers between cycles. PSAO is about how one
+message is written. They never interact.** If you are about to write an author name next
+to either one, don't — write the abbreviation and, if the mechanism needs explaining,
+explain the mechanism.
+
+**What is ported exactly vs adapted (MALMAS).** MALMAS optimizes *diversity* (exploration of
 dissimilar features as an end in itself, closed-loop on an objective validation-utility
 sensor). Software development optimizes *correctness* (one right solution). Hence:
 
@@ -124,13 +144,14 @@ verdicts are themselves LLM judgments scoped by the same heuristic-driven Router
 
 # MALMAS Rules
 
-- **Every agent** calls `skill({ name: "memory-retrieve" })` as their first action upon receiving a task.
+- **Every pipeline agent** calls `skill({ name: "memory-retrieve" })` as their first action upon receiving a task. That is all eleven agents of the roster except `ai-engineer`, which is a meta-agent: it operates *on* the configuration, not *within* a project cycle, so project memory is not its input. This exemption is deliberate — do not "fix" it by adding the call.
 - Team Lead calls `memory-retrieve` at Intake and uses Routing Intelligence from `global-memory.md` + `conceptual.md` to adapt routing decisions.
 - After each cycle, Team Lead calls `memory-update` (which delegates to `memory-summarize` for LLM compression).
 - Agents check `procedural.json` for duplicate/failed actions and do NOT repeat them.
 - Tester and Guardian use `feedback.json` from prior cycles to expand check scope (affected zones).
 - **Objective anchor (WI-1):** Tester always runs the fixed baseline set (`work-area/memory/baseline/manifest.json`) every cycle, independent of Router/heuristics. Each test record in `feedback.json` carries `source: "baseline" | "scoped"`. Heuristics are validated **only** against baseline results (scoped is what the heuristic itself dictated). Baseline is never disabled by scope reduction or ε-exploration.
 - Heuristics in `conceptual.json` that are disproven by baseline get demoted to `archived` (WI-3).
+- **Heuristics age (N8).** Confirm/refute counters alone leave a hole: a heuristic is only ever refuted if the Router *applied* it and the baseline caught it, so one whose zone stopped being relevant is never applied and therefore never refuted — it stays `active` forever, silently widening test scope. Two deterministic rules close it, both in `memory-summarize` Step 3.5: demote `active → provisional` after `tiers.staleness_cycles` cycles without a baseline confirmation (`rule:"stale"`), and reset `confirm_count` with a demotion to `provisional` when a zone the heuristic names is rewritten non-cosmetically per the coder report (`rule:"zone_rewritten"`).
 - **ε-exploration (WI-5):** with small probability `ε` (`exploration.epsilon`) Team Lead routes as if the chosen `active` heuristic were false — i.e. skips its discretionary scope expansion — and records the outcome as counter-evidence into `confirm_count`/`refute_count`. ε never disables baseline, P0 tests, or non-overridable gates (BLOCKER / P0 FAILED).
 
 # Team Lead Quick Reference

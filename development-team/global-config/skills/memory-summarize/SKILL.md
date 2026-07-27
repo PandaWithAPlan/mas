@@ -10,8 +10,8 @@ writes: work-area/memory/**
 
 Применяй после завершения Guardian в каждом цикле, **перед** финальной записью
 в conceptual.json (→ conceptual.md) и global-memory.md. Навык заменяет ручное
-написание эвристик автоматическим сжатием через LLM — как предписано MALMAS-паттерном
-(Dong et al., 2026, arXiv:2604.20261, Section 4.2.3): `ConMem = LLM(ProcMem, FeedMem)`.
+написание эвристик автоматическим сжатием через LLM — как предписано MALMAS-паттерном:
+`ConMem = LLM(ProcMem, FeedMem)`.
 
 > **Согласованность формулы (WI-9).** Канонической деривацией считается **stateless**-проход
 > `ConMem = LLM(ProcMem, FeedMem)` — он реализован режимом `recompact` (WI-4). Режим
@@ -27,7 +27,7 @@ writes: work-area/memory/**
 
 # Концепция
 
-В MALMAS-паттерне (Dong et al., 2026, arXiv:2604.20261) Summary-Agent выполняет три функции:
+В MALMAS-паттерне Summary-Agent выполняет три функции:
 1. **Сжатие:** ProcMem (сырая хронология) + FeedMem (результаты тестов и вердикты) → ConMem (сжатые эвристики)
 2. **Агрегация:** per-agent ConMem + FeedMem → GlobalMem (общий контекст для всех агентов)
 3. **Cross-agent knowledge transfer:** эвристики одного агента становятся доступны другим через GlobalMem
@@ -50,7 +50,7 @@ writes: work-area/memory/**
 ## Режим работы (WI-4): incremental / recompact
 
 Прежде чем начать, определи режим (триггер задаёт team-lead, см. его файл; параметры —
-`memory-config.json` → `recompaction`):
+`work-area/memory/config.json` → `recompaction`):
 
 - **incremental** (по умолчанию, внутри окна `window_N` циклов): дешёвое итеративное
   обновление — `existing_conceptual` подаётся на вход, эвристики дополняются/обновляются.
@@ -117,7 +117,7 @@ writes: work-area/memory/**
 
 ### Процедура «проверить эвристику X против baseline-only за N циклов»
 
-`N` = `baseline.validation_window_cycles` из `memory-config.json`.
+`N` = `baseline.validation_window_cycles` из `work-area/memory/config.json`.
 1. Собери записи `feedback.json` за последние N циклов.
 2. Отфильтруй тесты с `source:"baseline"` (scoped отбрось).
 3. Сопоставь baseline-исходы в зоне эвристики X с её `rule` и `falsification_condition`.
@@ -212,7 +212,7 @@ Router (team-lead) при похожей задаче обязан учитыв�
 ## Шаг 3.5. Ярусность и детерминированные переходы (WI-3)
 
 Слияние эвристик **запрещено** (`tiers.merge_allowed=false`). Вместо «объедини похожие
-при >10» действует ярусная модель. Параметры — `memory-config.json` → `tiers`.
+при >10» действует ярусная модель. Параметры — `work-area/memory/config.json` → `tiers`.
 
 ### Ярусы
 
@@ -239,6 +239,36 @@ Router (team-lead) при похожей задаче обязан учитыв�
   `current_cycle - last_confirmed_cycle`; `rule:"active_cap_overflow"`). **Не сливай.**
 - **Ре-промоут:** `archived` может вернуться в `provisional`/`active`, если снова
   набирает корроборацию по baseline.
+
+### Ось времени: устаревание и инвалидация по зоне (N8)
+
+Счётчиков `confirm_count`/`refute_count` недостаточно. Опровержение приходит только
+тогда, когда Router **применил** эвристику и baseline её поймал. Эвристика, зона которой
+перестала быть релевантной, не применяется — а значит и не опровергается: она остаётся
+`active` бесконечно, молча расширяя scope тестирования. Это единственный известный способ
+тихой деградации памяти, и закрывается он двумя детерминированными правилами.
+
+**Поля.** `last_confirmed_cycle` (номер цикла последнего подтверждения по baseline)
+в схеме уже был, но работал только как тай-брейкер при переполнении капа — собственных
+правил у него не было. Теперь есть, см. ниже. Обновляй его при каждом `confirm_count++`.
+Второе поле — `zones`: список модулей/каталогов, о которых эвристика говорит. Без него
+инвалидация по зоне не механизируется; если у старой эвристики его нет, выведи зоны из
+`evidence` при ближайшей рекомпакции.
+
+- **Устаревание `active → provisional`:** если
+  `current_cycle - last_confirmed_cycle ≥ tiers.staleness_cycles` —
+  демоут (`rule:"stale"`). Именно `provisional`, а не `archived`: эвристика не опровергнута,
+  она лишь давно не подтверждалась, и понижение только снимает с неё право менять routing.
+  Одно подтверждение по baseline возвращает её обратно.
+- **Инвалидация по зоне `→ provisional` со сбросом `confirm_count`:** если модуль, о котором
+  эвристика говорит, попал в раздел «Изменённые файлы» отчёта кодера
+  (`work-area/reports/dev-report-*-NNN.md`) с действием, **отличным от `косметика`** —
+  сбрось `confirm_count` в 0 и понизь до `provisional` (`rule:"zone_rewritten"`).
+  Прошлые подтверждения относились к прошлому состоянию кода и о новом не говорят ничего.
+  Включается флагом `tiers.zone_invalidation`.
+
+Оба перехода — обычные мутации памяти: каждая пишется в `changelog.jsonl` (WI-6) с полем
+`rule` и попадает в снапшот цикла.
 
 ### Обязательность `falsification_condition`
 

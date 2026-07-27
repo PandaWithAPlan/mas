@@ -26,10 +26,13 @@ jobs:
           python3 -c "import json; json.load(open('global-config/opencode.json'))"
           echo "global-config/opencode.json: OK"
 
+      # Шаблон параметров памяти живёт в проектном слое: агенты читают его копию
+      # из work-area/memory/config.json, потому что external_directory=deny делает
+      # всё за пределами рабочего каталога нечитаемым (см. CHECKLIST, Шаг 4.5).
       - name: memory-config.json — строгий JSON
         run: |
-          python3 -c "import json; json.load(open('global-config/memory-config.json'))"
-          echo "global-config/memory-config.json: OK"
+          python3 -c "import json; json.load(open('project-config/memory-config.json'))"
+          echo "project-config/memory-config.json: OK"
 
       # Проектный шаблон — JSONC (с комментариями //), строгий json.load на нём
       # падает по замыслу. Но синтаксическая поломка шаблона, который копируют
@@ -172,12 +175,38 @@ jobs:
           set -eu
           # Артефакты цикла нумеруются строго тремя цифрами (см. локальный AGENTS.md).
           # Одиночный N перед расширением означает, что конвенция где-то разъехалась.
-          if grep -rnE '(final-report|guardian|TR|DEV-FRONT|DEV-BACK|TEST)-N(\.[a-z]+|\b)' \
+          if grep -rnE '(final-report|guardian|TR|DEV-FRONT|DEV-BACK|TEST|dev-report-FRONT|dev-report-BACK)-N(\.[a-z]+|\b)' \
                global-config/ project-config/ | grep -v -- '-NNN'; then
             echo "FAIL: найден одиночный N вместо NNN в имени артефакта цикла" >&2
             exit 1
           fi
           echo "OK: конвенция NNN выдержана"
+
+      # Отчёт кодера — единственный артефакт, право на который выдано в обоих слоях.
+      # Дубль в шаблоне страхует от версий opencode, заменяющих карту edit целиком.
+      - name: Отчёт кодера разрешён в обоих слоях
+        run: |
+          python3 - <<'PY'
+          import re, sys
+
+          status = 0
+          for side, path in (("FRONT", "project-config/opencode.json"),
+                             ("BACK",  "project-config/opencode.json"),
+                             ("FRONT", "global-config/opencode.json"),
+                             ("BACK",  "global-config/opencode.json")):
+              src = open(path, encoding="utf-8").read()
+              needle = '"work-area/reports/dev-report-%s-*.md": "allow"' % side
+              # строка не должна быть закомментирована
+              live = [ln for ln in src.splitlines()
+                      if needle in ln and not ln.lstrip().startswith("//")]
+              if not live:
+                  print("FAIL: %s не разрешает запись отчёта coder-%s (%s)"
+                        % (path, side.lower(), needle), file=sys.stderr)
+                  status = 1
+          if status:
+              sys.exit(1)
+          print("OK: отчёт кодера разрешён и в глобальном слое, и в шаблоне проекта")
+          PY
 
       - name: Целостность карты навыков
         run: sh global-config/skills/check-skill-map.sh

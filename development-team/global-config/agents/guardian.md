@@ -25,7 +25,8 @@ temperature: 0.1
 
 2. **Прочитай входные артефакты:**
    - `work-area/reports/test-results/TR-NNN.md` — результаты тестирования (обязательно)
-   - `work-area/tasks/DEV-FRONT-NNN.md` и `DEV-BACK-NNN.md` — отчёты кодеров
+   - `work-area/reports/dev-report-FRONT-NNN.md` и `dev-report-BACK-NNN.md` — отчёты кодеров
+   - `work-area/tasks/DEV-FRONT-NNN.md` и `DEV-BACK-NNN.md` — постановки задач кодерам (для сверки scope)
    - `work-area/docs/requirements.md` — требования и ограничения
    - `work-area/docs/design.md` — проектное решение
    - `work-area/docs/explore-report.md` — карта проекта
@@ -78,7 +79,7 @@ temperature: 0.1
 ## Метаданные
 - Дата: YYYY-MM-DD HH:MM
 - Цикл: NNN
-- Источники: TR-NNN.md, DEV-FRONT-NNN.md, DEV-BACK-NNN.md
+- Источники: TR-NNN.md, dev-report-FRONT-NNN.md, dev-report-BACK-NNN.md
 - Итоговая рекомендация: RECOMMEND ACCEPT / RECOMMEND REWORK / RECOMMEND ESCALATE
 
 ## Покрытие анализа
