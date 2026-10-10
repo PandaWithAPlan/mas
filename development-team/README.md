@@ -80,6 +80,8 @@ Explorer → Analyst → Architect → [DevOps: префлайт-гейт] → C
 
 Первое действие каждого агента — извлечение релевантной памяти; запись и сведение памяти — ответственность `team-lead`.
 
+**Идентичность задачи и нумерация циклов.** У каждой задачи есть ID `T-NNN`; цикл внутри задачи (`task_cycle`, не более 3) отделён от сквозного цикла проекта (`project_cycle`), которым нумеруются артефакты (`TR-014.md`) и считаются все окна памяти. Счётчики ведёт `team-lead` в `work-area/memory/state.json`. Подробно — `global-config/AGENTS.md`, «Task identity & cycle numbering».
+
 Методология следует паттерну **MALMAS**. Контур коррекции замкнут объективным якорем — фиксированным регрессионным baseline, который `tester` прогоняет каждый цикл независимо от эвристик (только его результаты валидируют эвристики). Эвристики ярусные (`active`/`provisional`/`archived`) с обязательным условием фальсификации и детерминированными переходами; периодическая stateless-рекомпакция сбрасывает дрейф. Что перенесено из MALMAS точно, а что адаптировано под домен *корректности* (а не *разнообразия*) — задокументировано в `global-config/AGENTS.md`, секция «MALMAS: attribution & domain adaptations».
 
 ### Навыки (skills)
@@ -157,8 +159,8 @@ project-config/                 → копируется в корень ваш�
 work-area/
 ├── docs/        # explore-report.md, requirements.md, design.md
 ├── tasks/       # задачи делегирования
-├── sessions/    # состояние сессий
-├── memory/      # MALMAS: config.json + procedural / feedback / conceptual + global-memory
+├── sessions/    # журналы задач: session-T-NNN.md
+├── memory/      # MALMAS: config.json + state.json (счётчики) + procedural / feedback / conceptual + global-memory
 └── reports/     # dev-report-*.md, test-results/, guardian-*.md, devops-status.md, final-report-*.html
 ```
 
