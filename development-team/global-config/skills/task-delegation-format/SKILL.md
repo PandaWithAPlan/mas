@@ -61,7 +61,12 @@ read_paths: [
 
 write_path: "work-area/docs/explore-report.md"
 
-cycle_number: 1 | 2 | 3 | null
+task_id: "T-NNN"                 // из work-area/memory/state.json → current_task.id
+
+task_cycle: 1 | 2 | 3            // цикл внутри задачи: 1 — основной, 2–3 — доработка
+
+project_cycle: N                 // сквозной номер цикла проекта; он же NNN во всех путях
+                                 // артефактов этого цикла (TR-NNN.md, guardian-NNN.md, ...)
 
 is_rework: boolean
 
@@ -109,7 +114,8 @@ MALMAS-паттерн: prompt агента =
 **Цель:** [goal]
 
 **Контекст:** [context]
-[если is_rework: Цикл доработки N/3 — причины возврата: rework_reason]
+Задача [task_id], цикл задачи [task_cycle]/3, цикл проекта [project_cycle].
+[если is_rework: причины возврата: rework_reason]
 
 **Ограничения:**
 - [constraint 1]
@@ -132,7 +138,7 @@ MALMAS-паттерн: prompt агента =
 |-------------|-------------|
 | `explorer` | При повторном цикле: «Прочитай предыдущий explore-report.md и зафиксируй diff» |
 | `analyst` | «Основа — explore-report.md. Не домысливай структуру проекта» |
-| `architect` | «Строго на базе существующего кода из explore-report.md. Ты НЕ создаёшь task-файлы» |
+| `architect` | «Строго на базе существующего кода из explore-report.md. Ты НЕ создаёшь task-файлы». При повторном цикле — явный список путей `guardian-NNN.md` и `TR-NNN.md` **циклов этой задачи** (`NNN` от `start_cycle` до `project_cycle − 1`): отчёты других задач в `read_paths` не передаются |
 | `coder-front` / `coder-back` | «Change budget: [N] файлов из списка в design.md. Файлы вне списка — не трогать. Если нужно больше — сообщи Team Lead. Файлы, похожие, но НЕ трогать: [из design.md]» |
 | `tester` | «Перед тестами вызови skill(devops-gate-check). Только функциональность, не качество кода» |
 | `guardian` | «Запускается строго после Tester. TR-NNN.md обязателен» |
