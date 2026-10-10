@@ -35,6 +35,63 @@ Guardian's Scope Compliance would flag.
 
 **Baseline manifest ownership (WI-1):** `work-area/memory/baseline/manifest.json` is owned by **Team Lead** — it is the only role with write access to `work-area/memory/**`. Team Lead seeds it on the first cycle from PASSED P0/P1 tests and extends it via the deterministic rule in `memory-update` Step 0. Tester only *reads* and *runs* it, and must emit an explicit `⚠️ BASELINE ОТСУТСТВУЕТ` warning in `TR-NNN.md` when the manifest is missing or empty — a silently empty baseline means heuristics are validated by nothing.
 
+# Task identity & cycle numbering — READ FIRST
+
+The system counts three different things. Each has its own name, and a bare word
+"cycle" is never used for any of them in instructions or artifacts — mixing them up was
+the root cause of diagnostic S1 (see `DIAGNOSTICS.md`): per-task cycle numbers (1–3) fed
+into memory formulas that assume an ever-growing counter, so ε-exploration and heuristic
+staleness could never fire.
+
+| Name | Meaning | Used by |
+|---|---|---|
+| `task_id` | `T-NNN`, unique within the project, never reused | memory records, metrics, session journal name, decision history |
+| `task_cycle` | cycle within one task: `1` = main cycle, `2`–`3` = rework | rework limit, Plateau Detection, `guardian-verdict` Rule 5, `test-plan`, session cycle log |
+| `project_cycle` | project-wide cycle counter, only grows | `NNN` in artifact names, every `*_cycle` field of memory, ε-exploration, recompaction/validation/staleness windows, snapshots, `changelog.jsonl` |
+
+**Source of truth — `work-area/memory/state.json`**, owned and written by Team Lead
+(covered by its `work-area/memory/**` permission). Every operation on it is "read a
+number, add 1" — nothing that needs a shell.
+
+```json
+{
+  "task_seq": 7,
+  "project_cycle": 15,
+  "last_recompact_cycle": 10,
+  "current_task": {
+    "id": "T-007",
+    "parent": null,
+    "title": "rate-limit on /auth/login",
+    "status": "IN_PROGRESS",
+    "start_cycle": 14,
+    "task_cycle": 2
+  }
+}
+```
+
+| Event | Change in `state.json` |
+|---|---|
+| Intake of a new task | `task_seq += 1`, `project_cycle += 1`, `current_task = {id: "T-<task_seq as 3 digits>", start_cycle: project_cycle, task_cycle: 1, status: "IN_PROGRESS", parent: null}` |
+| REWORK | `project_cycle += 1`, `current_task.task_cycle += 1` |
+| Agent re-run inside the same cycle (incident) | nothing — the artifact of that cycle is overwritten, as before |
+| ACCEPT / ESCALATE | `current_task.status = "ACCEPTED" \| "ESCALATED"` |
+| Recompaction (`memory-update`, mode `recompact`) | `last_recompact_cycle = project_cycle` |
+
+Rules:
+
+- **`NNN` in artifact names is `project_cycle`**, zero-padded to three digits
+  (`TR-014.md`); above 999 it simply grows to four digits. A new task never restarts
+  numbering, so artifacts of one task never overwrite another's.
+- **At most 3 cycles per task in total** (`task_cycle` 1–3). If `task_cycle = 3` does not
+  reach ACCEPT, the task is escalated; there is no fourth cycle.
+- **Continuing after ESCALATE is a new task** with `parent: "T-NNN"` of the escalated one,
+  not a fourth cycle of the old one. The cycle limit stays honest and the link is kept.
+- **One active task per `work-area/`.** `work-area/docs/` holds exactly one
+  `explore-report.md` / `requirements.md` / `design.md`, and `state.json` holds one
+  `current_task`; parallel tasks need separate work areas.
+- **Delegations always carry all three values** (`task_id`, `task_cycle`, `project_cycle`)
+  — see `task-delegation-format`.
+
 # How Skills Work (execution model) — READ FIRST
 
 Навыки (`skills/*/SKILL.md`) — это **инструкции, которые подгружаются в твой контекст, а не вызываемые функции**. Когда ты делаешь `skill({ name: "X" })`, среда один раз вставляет текст `SKILL.md` в твой контекст. У навыка **нет** отдельного исполнения, входных аргументов и возвращаемого значения.
@@ -61,8 +118,8 @@ Guardian's Scope Compliance would flag.
 - If Tester hangs or completes partially, Team Lead reads the partial artifact and decides SUFFICIENT/INSUFFICIENT via `incident-protocol` before handing to Guardian.
 - **Doc Keeper runs only after Guardian verdict ACCEPT + Team Lead decision, and before Reviewer.** It is the ONLY agent that may write to `docs/`. It never runs on REWORK or ESCALATE cycles — documenting code that is about to be rewritten is wasted spend.
 - **Reviewer runs only after Guardian verdict ACCEPT + Team Lead decision.** Reviewer does not make quality/architecture decisions.
-- Maximum **3 REWORK cycles** per task. On cycle 3, Team Lead escalates to user instead of starting another cycle.
-- **Plateau Detection** overrides the cycle counter: if cycle ≥2 shows stagnant tests, repeated critical findings, expanding affected zones, or no metric progress → switch variant or escalate immediately.
+- Maximum **3 cycles per task in total** (`task_cycle` 1 = main, 2–3 = rework). If `task_cycle` 3 is not accepted, Team Lead escalates to user instead of starting another cycle. Continuing after ESCALATE is a new task with `parent`.
+- **Plateau Detection** overrides the cycle counter: if `task_cycle` ≥2 shows stagnant tests, repeated critical findings, expanding affected zones, or no metric progress → switch variant or escalate immediately.
 - **Scope discipline:** coders may ONLY touch files listed in their DEV task. Extra changes outside the plan = scope creep. Guardian checks this via the Scope Compliance section.
 - **Team Lead role boundary:** Team Lead NEVER executes code, tests, or infrastructure changes — it ONLY delegates via `skill({ name: "task-delegation-format" })`. Any direct execution by Team Lead is a system failure.
 - **Cross-stack API contracts:** if a task touches both frontend and backend, Architect MUST produce a "Сводка API-контрактов" table (C-001, C-002, ...). Team Lead MUST verify DEV-FRONT, DEV-BACK, and TEST all reference the same contracts before creating task files.
@@ -151,8 +208,8 @@ verdicts are themselves LLM judgments scoped by the same heuristic-driven Router
 - Tester and Guardian use `feedback.json` from prior cycles to expand check scope (affected zones).
 - **Objective anchor (WI-1):** Tester always runs the fixed baseline set (`work-area/memory/baseline/manifest.json`) every cycle, independent of Router/heuristics. Each test record in `feedback.json` carries `source: "baseline" | "scoped"`. Heuristics are validated **only** against baseline results (scoped is what the heuristic itself dictated). Baseline is never disabled by scope reduction or ε-exploration.
 - Heuristics in `conceptual.json` that are disproven by baseline get demoted to `archived` (WI-3).
-- **Heuristics age (N8).** Confirm/refute counters alone leave a hole: a heuristic is only ever refuted if the Router *applied* it and the baseline caught it, so one whose zone stopped being relevant is never applied and therefore never refuted — it stays `active` forever, silently widening test scope. Two deterministic rules close it, both in `memory-summarize` Step 3.5: demote `active → provisional` after `tiers.staleness_cycles` cycles without a baseline confirmation (`rule:"stale"`), and reset `confirm_count` with a demotion to `provisional` when a zone the heuristic names is rewritten non-cosmetically per the coder report (`rule:"zone_rewritten"`).
-- **ε-exploration (WI-5):** with small probability `ε` (`exploration.epsilon`) Team Lead routes as if the chosen `active` heuristic were false — i.e. skips its discretionary scope expansion — and records the outcome as counter-evidence into `confirm_count`/`refute_count`. ε never disables baseline, P0 tests, or non-overridable gates (BLOCKER / P0 FAILED).
+- **Heuristics age (N8).** Confirm/refute counters alone leave a hole: a heuristic is only ever refuted if the Router *applied* it and the baseline caught it, so one whose zone stopped being relevant is never applied and therefore never refuted — it stays `active` forever, silently widening test scope. Two deterministic rules close it, both in `memory-summarize` Step 3.5: demote `active → provisional` after `tiers.staleness_cycles` **project cycles** (`project_cycle`, never `task_cycle`) without a baseline confirmation (`rule:"stale"`), and reset `confirm_count` with a demotion to `provisional` when a zone the heuristic names is rewritten non-cosmetically per the coder report (`rule:"zone_rewritten"`).
+- **ε-exploration (WI-5):** with small probability `ε` (`exploration.epsilon`) — deterministically, on cycles where `project_cycle mod round(1/ε) == 0` — Team Lead routes as if the chosen `active` heuristic were false — i.e. skips its discretionary scope expansion — and records the outcome as counter-evidence into `confirm_count`/`refute_count`. ε never disables baseline, P0 tests, or non-overridable gates (BLOCKER / P0 FAILED).
 
 # Team Lead Quick Reference
 

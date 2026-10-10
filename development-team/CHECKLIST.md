@@ -1,6 +1,6 @@
 # Чеклист адаптации development-team под проект
 
-Версия чеклиста: 1.10.0  
+Версия чеклиста: 1.11.0  
 Система: OpenCode Multi-Agent System (MALMAS)
 
 Используй этот документ при каждом переносе конфигурации на новый проект.
@@ -252,6 +252,43 @@ cp development-team/project-config/memory-config.json work-area/memory/config.js
 Правь значения в `work-area/memory/config.json` — они действуют на все навыки `memory-*`
 сразу. Шаблон в `project-config/` остаётся эталоном для следующих проектов.
 
+### 4.6 Счётчики идентичности задачи и циклов
+
+`state.json` — источник истины для `task_id` (`T-NNN`), сквозного `project_cycle` и
+`task_cycle` текущей задачи (см. `global-config/AGENTS.md`, «Task identity & cycle
+numbering»). На новом проекте он создаётся нулями; `team-lead` дальше только читает
+число и прибавляет единицу.
+
+```bash
+printf '{"task_seq": 0, "project_cycle": 0, "last_recompact_cycle": 0, "current_task": null}\n' \
+  > work-area/memory/state.json
+```
+
+Наличие этого файла — ещё и признак версии: если `state.json` нет, а в `procedural.json`
+уже есть история, `team-lead` на первом Intake выполнит миграцию (Шаг 4.7). Поэтому на
+**новом** проекте файл обязателен.
+
+### 4.7 Обновление установки с версии ≤ 1.10.0
+
+До 1.11.0 номер цикла был задачным (1–3) и сбрасывался с каждой задачей, а идентификатора
+задачи не было. Существующую память переписывать не нужно — `team-lead` выполнит миграцию
+сам на первом Intake после обновления, по признаку «`state.json` нет, `procedural.json.history`
+не пуст» (`team-lead.md`, Intake, шаг 0). Процедура детерминирована:
+
+1. Снапшот памяти до миграции (`snapshots/cycle-000-migrate-YYYYMMDD-HHMM/`).
+2. `task_seq` = число различных значений `task` в `procedural.json.history`;
+   `project_cycle` = число записей циклов (объектов `history`); `last_recompact_cycle` = `project_cycle`.
+3. У всех эвристик `conceptual.json`: `last_confirmed_cycle` и `last_tested_cycle` = `project_cycle`
+   (отсрочка вместо мгновенного устаревания: старые номера несравнимы с новыми).
+   `created_cycle` не меняется.
+4. В `baseline/manifest.json` (если есть): `created_cycle` и `updated_cycle` = `project_cycle`.
+5. Старые записи `history` **не** переписываются (append-only) — в них остаются прежние `task`/`cycle`.
+6. Одна строка в `changelog.jsonl`:
+   `{"mutation":"migrate","rule":"migrate_cycle_numbering","reason":"переход на сквозную нумерацию (1.11.0)", ...}`.
+
+Если хочешь выполнить миграцию вручную до первого запуска — те же шаги, затем создай
+`state.json` с полученными значениями и `"current_task": null`.
+
 ### Чек-лист шага
 
 - [ ] Созданы `docs/`, `tasks/`, `sessions/`, `reports/test-results/`, `memory/baseline/`, `memory/snapshots/`
@@ -260,6 +297,7 @@ cp development-team/project-config/memory-config.json work-area/memory/config.js
 - [ ] `metrics.json` инициализирован как `[]`
 - [ ] `conceptual.md` и `global-memory.md` созданы (могут быть пустыми)
 - [ ] `changelog.jsonl` создан пустым
+- [ ] `state.json` создан с нулевыми счётчиками и `"current_task": null` (Шаг 4.6)
 - [ ] `work-area/memory/config.json` создан копией `project-config/memory-config.json`
   (**без него пороги ε / ярусов / рекомпакции недостижимы для агентов**)
 - [ ] `baseline/manifest.json` **не** создавался вручную — его посеет `team-lead` после первого цикла
@@ -295,8 +333,9 @@ cp development-team/project-config/memory-config.json work-area/memory/config.js
 
 ## Шаг 6 — Первый запуск
 
-1. Запустить `session-init` (team-lead создаст `work-area/sessions/session-YYYY-MM-DD.md`)
-2. Дать первую задачу team-lead
+1. Дать первую задачу team-lead: на Intake он присвоит ей `T-001` и `project_cycle = 1`
+   в `state.json`, затем через `session-init` создаст `work-area/sessions/session-T-001.md`
+2. Убедиться, что после Intake `state.json` содержит `current_task.id = "T-001"`
 3. Убедиться, что `memory-retrieve` не падает на пустых файлах памяти
 
 ---

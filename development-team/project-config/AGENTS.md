@@ -40,6 +40,8 @@ PROJECT_ROOT/
     ├── memory/                         ← вся память: владелец team-lead (единственный писатель)
     │   ├── config.json                 ← ПОРОГИ ПАМЯТИ (ε, ярусы, рекомпакция): копия
     │   │                                 project-config/memory-config.json; всем только на чтение
+    │   ├── state.json                  ← СЧЁТЧИКИ: task_seq, project_cycle, current_task (T-NNN, task_cycle);
+    │   │                                 пишет только team-lead (см. «Task identity & cycle numbering»)
     │   ├── global-memory.md            ← точка входа: контекст задачи
     │   ├── conceptual.json             ← ЯРУСНЫЕ ЭВРИСТИКИ — ИСТОЧНИК ИСТИНЫ (WI-2/WI-3)
     │   ├── conceptual.md               ← читаемое представление conceptual.json; генерируется, вручную не править
@@ -50,7 +52,7 @@ PROJECT_ROOT/
     │   ├── baseline/
     │   │   └── manifest.json           ← объективный якорь: фиксированный регрессионный набор (WI-1)
     │   └── snapshots/
-    │       └── cycle-NNN-.../          ← append-only снапшоты памяти по циклам (WI-6)
+    │       └── cycle-NNN-.../          ← append-only снапшоты памяти; NNN = project_cycle (WI-6)
     ├── docs/
     │   ├── explore-report.md           ← артефакт explorer
     │   ├── requirements.md             ← артефакт analyst
@@ -60,15 +62,15 @@ PROJECT_ROOT/
     │   ├── DEV-BACK-NNN.md             ← team-lead → coder-back
     │   └── TEST-NNN.md                 ← team-lead → tester
     ├── reports/
-    │   ├── dev-report-FRONT-NNN.md     ← coder-front, цикл N (владелец — сам кодер)
-    │   ├── dev-report-BACK-NNN.md      ← coder-back, цикл N (владелец — сам кодер)
+    │   ├── dev-report-FRONT-NNN.md     ← coder-front, NNN = project_cycle (владелец — сам кодер)
+    │   ├── dev-report-BACK-NNN.md      ← coder-back, NNN = project_cycle (владелец — сам кодер)
     │   ├── test-results/
-    │   │   └── TR-NNN.md               ← tester, цикл N
-    │   ├── guardian-NNN.md             ← guardian, цикл N
+    │   │   └── TR-NNN.md               ← tester, NNN = project_cycle
+    │   ├── guardian-NNN.md             ← guardian, NNN = project_cycle
     │   ├── devops-status.md            ← devops, preflight gate / инфраструктурные изменения
     │   └── final-report-NNN.html         ← reviewer, итоговый отчёт
     └── sessions/
-        └── session-YYYY-MM-DD.md       ← журнал текущей и прошлых сессий (владелец: team-lead)
+        └── session-T-NNN.md            ← журнал задачи T-NNN, один файл на задачу (владелец: team-lead)
 ```
 
 ---
@@ -177,12 +179,15 @@ DevOps Gate обязателен согласно глобальным Routing R
 
 ### Конвенция именования артефактов
 
-- **Все новые артефакты используют строго 3-значный номер цикла (`NNN`):**
+- **`NNN` в именах артефактов — сквозной `project_cycle`** из `work-area/memory/state.json`,
+  трёхзначный с ведущими нулями (`TR-014.md`); после 999 номер просто растёт до четырёх цифр.
+  Новая задача нумерацию **не** сбрасывает, поэтому артефакты одной задачи не перезаписывают
+  другую. Цикл внутри задачи (`task_cycle`, 1–3) в именах файлов не участвует.
   - `DEV-FRONT-NNN.md`, `DEV-BACK-NNN.md`, `TEST-NNN.md`
-  - `TR-NNN.md`, `guardian-NNN.md`, `final-report-NNN.html`
-  - `session-YYYY-MM-DD.md` (без номера цикла)
+  - `TR-NNN.md`, `guardian-NNN.md`, `dev-report-*-NNN.md`, `final-report-NNN.html`
+  - `session-T-NNN.md` — по идентификатору задачи, без номера цикла
 - **Суффиксы `-retry`, `-diagnostic` и даты в именах отчётов запрещены.** При повторном запуске агента в том же цикле — перезапись существующего артефакта (с пометкой в `procedural.json`).
-- **`work-area/docs/` содержит только 3 канонических файла:** `explore-report.md`, `requirements.md`, `design.md`. При параллельных задачах Team Lead создаёт отдельные сессии.
+- **`work-area/docs/` содержит только 3 канонических файла:** `explore-report.md`, `requirements.md`, `design.md`. Поэтому на одну `work-area/` — **одна активная задача**; параллельным задачам нужны отдельные рабочие области.
 
 ### Протокол инцидентов
 
@@ -244,8 +249,8 @@ DevOps Gate обязателен согласно глобальным Routing R
      Шаблон строк уже готов, подставь реальные значения. -->
 
 - **Зоны ответственности:** `coder-front` → `[FRONTEND_DIR]/`; `coder-back` → `[BACKEND_DIRS]` — см. секцию «Зоны ответственности».
-- **Конвенция нумерации:** все артефакты используют строго 3-значный номер цикла (`NNN`) — см. секцию «Конвенция именования артефактов».
+- **Конвенция нумерации:** `NNN` в именах артефактов — сквозной `project_cycle`; задачи — `T-NNN` — см. секцию «Конвенция именования артефактов».
 - **DevOps Gate:** обязателен для team-lead, coder-front, coder-back, tester — через `devops-gate-check`.
-- **Максимум 3 REWORK-цикла**, Plateau Detection на cycle ≥2, эскалация при достижении лимита.
+- **Максимум 3 цикла на задачу** (`task_cycle` 1–3), Plateau Detection на `task_cycle` ≥2, эскалация при недостижении ACCEPT на третьем; продолжение после ESCALATE — новая задача с `parent`.
 - **Scope discipline:** кодеры — только файлы из DEV-задачи; Guardian проверяет Scope Compliance.
 - **Cross-stack API contracts:** Architect → «Сводка API-контрактов»; Team Lead верифицирует перед созданием task-файлов.

@@ -4,11 +4,12 @@
   "_attribution": "MALMAS — паттерн трёхслойной памяти. См. раздел Memory и MALMAS-секции в global-config/AGENTS.md.",
 
   "versioning": {
-    "_comment": "WI-6: версионирование и журнал мутаций памяти.",
+    "_comment": "WI-6: версионирование и журнал мутаций памяти. Имя снапшота — cycle-<project_cycle>-YYYYMMDD-HHMM. state.json входит в снапшот: без счётчиков снапшот нельзя корректно восстановить.",
     "snapshots_dir": "work-area/memory/snapshots",
     "changelog": "work-area/memory/changelog.jsonl",
     "snapshot_retention": 20,
     "snapshot_targets": [
+      "state.json",
       "conceptual.json",
       "conceptual.md",
       "global-memory.md",
@@ -21,6 +22,7 @@
     "_comment": "WI-1: объективный якорь. Стабильный регрессионный набор, который tester прогоняет КАЖДЫЙ цикл независимо от Router/эвристик. Только baseline-результаты валидируют эвристики (scoped игнорируются — их сформировала сама эвристика).",
     "manifest": "work-area/memory/baseline/manifest.json",
     "always_run": true,
+    "_comment_units": "Все окна и пороги в «циклах» здесь и ниже считаются в project_cycle (сквозной счётчик проекта из work-area/memory/state.json), а НЕ в task_cycle (1–3 внутри задачи). См. global-config/AGENTS.md, «Task identity & cycle numbering».",
     "validation_window_cycles": 5
   },
 
@@ -38,11 +40,13 @@
 
   "exploration": {
     "_comment": "WI-5: ε-разведка в Router (team-lead), чтобы политика могла себя опровергнуть. С вероятностью epsilon Router НЕ применяет дискреционное расширение scope, продиктованное выбранной active-эвристикой (маршрутизирует как будто она ложна), а исход записывает контр-свидетельством в confirm_count/refute_count. ВАРЬИРУЕТСЯ ТОЛЬКО дискреционный scope: baseline (WI-1), P0-тесты и непереопределяемые гейты (BLOCKER/P0 FAILED) разведка не трогает НИКОГДА.",
+    "_comment_deterministic": "Детерминированный суррогат случайности: разведка на циклах, где project_cycle mod round(1/epsilon) == 0 (при 0.1 — каждый 10-й цикл проекта).",
     "epsilon": 0.1
   },
 
   "recompaction": {
     "_comment": "WI-4: разрыв итерации. Внутри окна window_N циклов допустимы дешёвые итеративные обновления. Раз в window_N циклов (или по drift_trigger) выполняется stateless-рекомпакция: conceptual.json выводится с нуля ТОЛЬКО из procedural.json + feedback.json, без подачи предыдущего conceptual на вход (буквально ConMem = LLM(ProcMem, FeedMem)). Канон после WI-4 — stateless-проход; итеративное окно — сознательное ограниченное отклонение (см. WI-9).",
+    "_comment_units": "window_N — в project_cycle: рекомпакция, если project_cycle - state.json.last_recompact_cycle >= window_N.",
     "window_N": 5,
     "drift_trigger": {
       "active_delta_threshold": 5,
