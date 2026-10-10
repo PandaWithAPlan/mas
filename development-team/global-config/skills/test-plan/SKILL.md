@@ -33,7 +33,7 @@ Tester передаёт:
 
 ```
 test_task_path: "work-area/tasks/TEST-NNN.md"
-cycle_number: 1–3
+task_cycle: 1–3                                // цикл внутри задачи, не project_cycle
 feedback_memory: {                           // из feedback.json, опционально
   affected_zones: ["auth", "payment"],
   previous_failed_tests: ["TEST-003", "TEST-005"]
@@ -93,8 +93,9 @@ baseline_manifest: {                         // из work-area/memory/baseline/m
 
 Если тест подпадает под несколько правил — берётся **наивысший** приоритет.
 
-### Для повторных циклов (cycle ≥ 2)
+### Для повторных циклов задачи (`task_cycle` ≥ 2)
 
+- «Предыдущий цикл» — цикл **этой же задачи** (`task_cycle − 1`, его `TR-NNN.md` с `NNN = project_cycle − 1`); результаты других задач сюда не относятся
 - Все тесты, которые были FAILED в предыдущем цикле → автоматически P0
 - Новые тесты, добавленные в этом цикле → приоритет по общим правилам
 - Тесты, которые были PASSED в предыдущем цикле → P1/P2 (в зависимости от категории)

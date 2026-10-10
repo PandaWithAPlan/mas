@@ -49,10 +49,10 @@ p0_failed: boolean                             // есть ли хотя бы о
 
 analysis_complete: boolean                     // true если все 5 зон покрыты, false если PARTIAL
 
-cycle_number: 1–3
+task_cycle: 1–3                               // цикл внутри задачи (НЕ project_cycle из имён файлов)
 
 plateau_indicators: {
-  same_critical_as_previous: boolean,          // те же CRITICAL что в прошлом цикле?
+  same_critical_as_previous: boolean,          // те же CRITICAL, что в прошлом цикле этой же задачи?
   affected_zones_expanding: boolean            // affected zones растут?
 }
 ```
@@ -129,7 +129,7 @@ overridable: false
 
 И одно из условий:
 
-- `cycle_number >= 3` — третий цикл с критическими проблемами → **RECOMMEND ESCALATE**
+- `task_cycle >= 3` — третий (последний) цикл задачи с критическими проблемами → **RECOMMEND ESCALATE**. Сравнивай именно `task_cycle`: `project_cycle` из `NNN` в именах артефактов растёт через задачи, и сравнение с ним эскалировало бы любую задачу после третьего цикла проекта
 - `plateau_indicators.same_critical_as_previous === true` — те же CRITICAL второй цикл подряд → **RECOMMEND ESCALATE**
 - `plateau_indicators.affected_zones_expanding === true` — зона поражения растёт → **RECOMMEND ESCALATE**
 

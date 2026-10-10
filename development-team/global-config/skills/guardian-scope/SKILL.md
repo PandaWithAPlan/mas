@@ -31,8 +31,8 @@ Guardian читает до 8 артефактов + дифф кода и про�
 Эти данные у тебя уже есть в контексте (из задачи, артефактов и предыдущих шагов) — извне ничего не «передаётся». Собери их перед началом:
 
 ```
-cycle_number: 1–3
-affected_zones: ["auth", "payment"]        // из feedback.json, предыдущий цикл
+task_cycle: 1–3                            // цикл внутри задачи, не project_cycle
+affected_zones: ["auth", "payment"]        // из feedback.json, предыдущий цикл этой же задачи
 previous_critical_categories: ["security"]  // из feedback.json, категории прошлых критических замечаний
 files_to_analyze_count: 5                  // сколько файлов в диффе
 has_frontend: boolean
