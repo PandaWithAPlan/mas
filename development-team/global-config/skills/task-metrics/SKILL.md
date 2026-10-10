@@ -34,11 +34,13 @@ writes: work-area/memory/metrics.json
 Эти данные у тебя уже есть в контексте (из задачи, артефактов и предыдущих шагов) — извне ничего не «передаётся». Собери их перед началом:
 
 ```
-task_id: "DEV-XXX"
+task_id: "T-NNN"               // current_task.id из work-area/memory/state.json
+parent: "T-NNN" | null         // если задача — продолжение эскалированной
 description: "краткое описание задачи"
 complexity: 0–10
 selected_variant: "A" | "B" | "C"
-cycles_count: 1–3
+cycles_count: 1–3               // финальный task_cycle
+project_cycles: [start, end]   // start_cycle задачи и project_cycle последнего цикла
 plateau_detected: boolean
 final_status: "ACCEPTED" | "ESCALATED"
 
@@ -54,7 +56,7 @@ agents_used: {
 }
 
 rework_triggers: [
-  {cycle: N, reason: "..."},
+  {task_cycle: N, reason: "..."},
   ...
 ]
 
@@ -68,11 +70,13 @@ completed: "ISO timestamp"     // текущее время закрытия
 
 ```json
 {
-  "task": "DEV-XXX",
+  "task": "T-007",
+  "parent": null,
   "description": "Добавлен OAuth2-логин",
   "complexity": 6,
   "selected_variant": "B",
   "cycles_count": 2,
+  "project_cycles": [14, 15],
   "plateau_detected": false,
   "final_status": "ACCEPTED",
   "agents_used": {
@@ -84,8 +88,8 @@ completed: "ISO timestamp"     // текущее время закрытия
     "guardian": {"calls": 2, "verdicts": ["REWORK", "ACCEPT"], "status": "DONE"}
   },
   "rework_triggers": [
-    {"cycle": 1, "reason": "TEST-003 regression in payment after auth change"},
-    {"cycle": 1, "reason": "Guardian critical: no input validation on email field"}
+    {"task_cycle": 1, "reason": "TEST-003 regression in payment after auth change"},
+    {"task_cycle": 1, "reason": "Guardian critical: no input validation on email field"}
   ],
   "estimated_tokens": 85000,
   "duration_hours": 0.45,
@@ -98,9 +102,11 @@ completed: "ISO timestamp"     // текущее время закрытия
 
 | Поле | Правило |
 |------|---------|
-| `task` | ID задачи как в task-файлах |
+| `task` | `T-NNN` из `state.json` (имена task-файлов несут `project_cycle`, а не ID задачи) |
+| `parent` | `T-NNN` эскалированной задачи, если эта — её продолжение; иначе `null` |
 | `complexity` | Оценка 0–10 из Intake |
-| `cycles_count` | Финальное количество циклов (включая первый) |
+| `cycles_count` | Финальный `task_cycle` — количество циклов задачи, включая первый (не более 3) |
+| `project_cycles` | `[start_cycle, project_cycle последнего цикла]` — по ним находятся артефакты задачи |
 | `plateau_detected` | `true` если сработал Plateau Detection хотя бы раз |
 | `final_status` | `"ACCEPTED"` или `"ESCALATED"` |
 | `agents_used.[agent].calls` | Сколько раз агент был запущен за всю задачу |
@@ -161,7 +167,7 @@ completed: "ISO timestamp"     // текущее время закрытия
 Сформируй следующее **сам** и встрой в свой ответ/артефакт (это шаблон того, что ты пишешь, а не возвращаемое значение функции — повторно навык не вызывается):
 
 ```
-Метрики записаны: DEV-XXX → ACCEPTED
+Метрики записаны: T-NNN → ACCEPTED
 Циклов: 2 | Plateau: нет | Агентов: 5 | Длительность: 0.5h
 ```
 

@@ -93,7 +93,7 @@ compatibility: opencode
 
 ### SUFFICIENT
 - Передай handoff note следующему агенту в цепочке
-- Зафиксируй инцидент в `work-area/sessions/session-YYYY-MM-DD.md` (секция «Инциденты»)
+- Зафиксируй инцидент в `work-area/sessions/session-T-NNN.md` (секция «Инциденты»)
 
 ### INSUFFICIENT
 - Запусти агента заново, передав только суженный scope

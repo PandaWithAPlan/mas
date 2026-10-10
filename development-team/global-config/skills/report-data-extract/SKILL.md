@@ -32,8 +32,10 @@ Reviewer на модели minimax-m2.7 не должен читать 7 арт�
 Reviewer передаёт:
 ```
 task_name: "[краткое название]"     // из команды Team Lead
-cycle: N                            // номер финального цикла
-session_path: "work-area/sessions/session-YYYY-MM-DD.md"
+task_id: "T-NNN"                    // из state.json
+task_cycle: N                       // финальный цикл задачи (1–3)
+project_cycle: N                    // его сквозной номер = NNN в путях ниже
+session_path: "work-area/sessions/session-T-NNN.md"
 requirements_path: "work-area/docs/requirements.md"
 design_path: "work-area/docs/design.md"
 dev_front_path: "work-area/reports/dev-report-FRONT-NNN.md" | null
@@ -170,10 +172,10 @@ guardian: {
   report_title: "Итоговый отчёт — [task_name]",
   generated_at: "YYYY-MM-DD HH:MM",
   data_sources_used: ["requirements.md", "design.md", ...],   // какие файлы реально прочитаны
-  data_sources_missing: ["session-YYYY-MM-DD.md"] | [],      // какие не найдены
+  data_sources_missing: ["session-T-NNN.md"] | [],           // какие не найдены
 
   // Было ли несколько циклов?
-  multi_cycle: boolean,        // true если complexity и testing.partial_completion намекают на >1 цикла
+  multi_cycle: boolean,        // true, если task_cycle > 1 (не гадать по косвенным признакам)
 
   // Статус документации — placeholder, reviewer дополнит через doc-consistency-check
   doc_status: null
