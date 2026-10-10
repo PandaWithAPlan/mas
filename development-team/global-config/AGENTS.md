@@ -202,7 +202,7 @@ verdicts are themselves LLM judgments scoped by the same heuristic-driven Router
 # MALMAS Rules
 
 - **Every pipeline agent** calls `skill({ name: "memory-retrieve" })` as their first action upon receiving a task. That is all eleven agents of the roster except `ai-engineer`, which is a meta-agent: it operates *on* the configuration, not *within* a project cycle, so project memory is not its input. This exemption is deliberate — do not "fix" it by adding the call.
-- Team Lead calls `memory-retrieve` at Intake and uses Routing Intelligence from `global-memory.md` + `conceptual.md` to adapt routing decisions.
+- Team Lead calls `memory-retrieve` at Intake — the one exception to "first action": it first updates `work-area/memory/state.json`, because `memory-retrieve` looks up the current task by its `task_id` — and uses Routing Intelligence from `global-memory.md` + `conceptual.md` to adapt routing decisions.
 - After each cycle, Team Lead calls `memory-update` (which delegates to `memory-summarize` for LLM compression).
 - Agents check `procedural.json` for duplicate/failed actions and do NOT repeat them.
 - Tester and Guardian use `feedback.json` from prior cycles to expand check scope (affected zones).

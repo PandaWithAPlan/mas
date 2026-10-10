@@ -241,6 +241,36 @@ jobs:
           fi
           echo "OK: негативная фикстура отработала (exit 1, как и ожидалось)"
 
+      # S1 (DIAGNOSTICS, 4-я диагностика): один «цикл» обозначал и цикл внутри задачи (1–3),
+      # и сквозной цикл проекта — из-за этого ε-разведка и устаревание эвристик не срабатывали.
+      # Теперь величины названы явно: task_id / task_cycle / project_cycle. Голое cycle_number,
+      # DEV-XXX вместо T-NNN и журнал сессии по дате — признаки отката к старой модели.
+      - name: Идентичность задачи — нет старых обозначений цикла (S1)
+        run: |
+          set -eu
+          check_identity() {
+            # $1 — каталоги для проверки; печатает нарушения и возвращает 1, если они есть
+            if grep -rnE '\bcycle_number\b|DEV-XXX|session-YYYY-MM-DD' $1; then
+              return 1
+            fi
+            return 0
+          }
+
+          if ! check_identity "global-config/ project-config/"; then
+            echo "FAIL: найдены старые обозначения: используйте task_cycle / project_cycle, T-NNN и session-T-NNN.md (см. AGENTS.md, «Task identity & cycle numbering»)" >&2
+            exit 1
+          fi
+          echo "OK: старых обозначений цикла и задачи нет"
+
+          # Негатив: проверка обязана поймать голое cycle_number
+          FIX=$(mktemp -d)
+          printf 'cycle_number: 1–3\n' > "$FIX/SKILL.md"
+          if check_identity "$FIX" >/dev/null; then
+            echo "FAIL: проверка пропустила голое cycle_number" >&2
+            exit 1
+          fi
+          echo "OK: негативная фикстура отработала (нарушение поймано)"
+
       - name: Не осталось плейсхолдеров в глобальном слое
         run: |
           set -eu
