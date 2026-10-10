@@ -53,16 +53,16 @@ Baseline — единственное, чем валидируются эври�
    ```json
    {
      "_comment": "WI-1: фиксированный регрессионный набор. Прогоняется tester КАЖДЫЙ цикл независимо от Router, эвристик и ε-разведки.",
-     "created_cycle": "NNN",
-     "updated_cycle": "NNN",
+     "created_cycle": 14,
+     "updated_cycle": 14,
      "test_ids": ["TC-001", "TC-004", "TC-007"]
    }
    ```
 
 3. **Файл есть** → реши по детерминированному правилу, расширять ли набор:
    - тест из текущего цикла имеет приоритет P0/P1, прошёл `PASSED` и
-     **прошёл в двух циклах подряд** → добавь его `test_id` в `test_ids`,
-     обнови `updated_cycle`;
+     **прошёл в двух последних циклах проекта, где прогонялся** → добавь его `test_id`
+     в `test_ids`, обнови `updated_cycle`;
    - тест из `test_ids` начал стабильно падать по причине **сознательного
      изменения требований** (а не регрессии) → удали его и зафиксируй причину
      строкой в `changelog.jsonl` (Шаг 5.5b). Удаление из-за того, что тест
@@ -78,7 +78,9 @@ Baseline никогда не сокращается ради ускорения 
 ## Шаг 1. Прочитать исходные данные
 
 Прочитай:
-- `work-area/sessions/session-YYYY-MM-DD.md` — хронология цикла
+- `work-area/memory/state.json` — `task_id`, `task_cycle`, `project_cycle` текущего цикла
+  (поле `created_cycle`/`updated_cycle` манифеста и все `*_cycle` ниже — это `project_cycle`)
+- `work-area/sessions/session-T-NNN.md` — хронология задачи
 - `work-area/reports/dev-report-FRONT-NNN.md` и `work-area/reports/dev-report-BACK-NNN.md` — отчёты кодеров
 - `work-area/reports/test-results/TR-NNN.md` — результаты тестирования
 - `work-area/reports/guardian-NNN.md` — заключение Guardian
@@ -95,8 +97,9 @@ Baseline никогда не сокращается ради ускорения 
   "updated": "YYYY-MM-DD HH:MM",
   "history": [
     {
-      "task": "DEV-XXX",
-      "cycle": 1,
+      "task": "T-007",
+      "task_cycle": 1,
+      "project_cycle": 14,
       "complexity": 6,
       "entries": [
         {
@@ -125,7 +128,7 @@ Baseline никогда не сокращается ради ускорения 
 
 Правила заполнения:
 - `entry_id` — **стабильный детерминированный ID** записи (WI-2). Это короткий хэш
-  (первые 6 hex-символов) от строки `{task}|{cycle}|{agent}|{action}|{files_touched joined}`.
+  (первые 6 hex-символов) от строки `{task}|{project_cycle}|{agent}|{action}|{files_touched joined}`.
   Один и тот же факт всегда даёт один и тот же ID → находки идентифицируемы между
   циклами (это же закрывает детерминированную идентичность для Plateau Detection).
   Префикс `proc-`.
@@ -134,7 +137,9 @@ Baseline никогда не сокращается ради ускорения 
 - `files_touched` — всегда массив, даже если пустой
 - `change_type` — "create" / "modify" / "delete" / "none"
 - `status` — "DONE" / "PARTIAL" / "FAILED"
-- В одном объекте `task` может быть несколько `cycle` объектов (для REWORK)
+- Один объект `history` = один цикл: `task` (`T-NNN`), `task_cycle` (1–3) и `project_cycle`
+  (сквозной) — значения из `state.json`. У задачи с REWORK несколько объектов с одним `task`
+  и разными `task_cycle`; `project_cycle` в `history` не повторяется никогда
 - Новые записи дописываются в конец массива `history`
 
 ## Шаг 3. Обновить Feedback Memory
@@ -147,10 +152,11 @@ Baseline никогда не сокращается ради ускорения 
   "updated": "YYYY-MM-DD HH:MM",
   "history": [
     {
-      "task": "DEV-XXX",
-      "cycle": 1,
+      "task": "T-007",
+      "task_cycle": 1,
+      "project_cycle": 14,
       "testing": {
-        "report": "work-area/reports/test-results/TR-001.md",
+        "report": "work-area/reports/test-results/TR-014.md",
         "total": 8,
         "passed": 6,
         "failed": 2,
@@ -169,7 +175,7 @@ Baseline никогда не сокращается ради ускорения 
         ]
       },
       "guardian": {
-        "report": "work-area/reports/guardian-001.md",
+        "report": "work-area/reports/guardian-014.md",
         "verdict": "REWORK",
         "critical_count": 1,
         "critical_issues": [
@@ -189,7 +195,7 @@ Baseline никогда не сокращается ради ускорения 
 
 Правила заполнения:
 - `finding_id` — **стабильный детерминированный ID** находки (WI-2): короткий хэш
-  (первые 6 hex) от `{task}|{cycle}|{file}|{rule/category или test_id}|{zone}`. Префикс
+  (первые 6 hex) от `{task}|{project_cycle}|{file}|{rule/category или test_id}|{zone}`. Префикс
   `find-`. На него ссылаются эвристики в `conceptual.json` (поле `evidence`), поэтому он
   обязан быть стабильным и резолвиться линтером `check-memory-provenance.sh`.
 - `by_source` — разбивка результатов на **baseline** (стабильный регрессионный якорь,
@@ -218,12 +224,13 @@ Baseline никогда не сокращается ради ускорения 
    - `procedural_entries` — записи из procedural.json за текущий цикл (результат Шага 2)
    - `feedback_entries` — записи из feedback.json за текущий цикл (результат Шага 3)
    - `agent_ids` — список агентов, участвовавших в цикле
-   - `cycle_number` — номер цикла
-   - `task_id` — DEV-XXX
+   - `task_id` — `T-NNN`, `task_cycle`, `project_cycle` — из `state.json`
+     (`current_cycle` в формулах `memory-summarize` ≡ `project_cycle`)
    - `existing_conceptual` — содержимое `conceptual.json` (если существует)
    - `mode` — `incremental` | `recompact` (WI-4). Выбирается по правилу из
-     `work-area/memory/config.json` → `recompaction`: `recompact`, если с последней рекомпакции
-     прошло ≥ `window_N` циклов **или** сработал `drift_trigger`; иначе `incremental`.
+     `work-area/memory/config.json` → `recompaction`: `recompact`, если
+     `project_cycle − state.json.last_recompact_cycle ≥ window_N` **или** сработал `drift_trigger`;
+     иначе `incremental`. После рекомпакции team-lead записывает `last_recompact_cycle = project_cycle`.
      В режиме `recompact` `existing_conceptual` навыку **не передаётся** (stateless-проход).
 
 2. По процедуре навыка `memory-summarize` ты сам сформируешь сжатие ProcMem + FeedMem → эвристики в виде структуры:
@@ -293,7 +300,7 @@ Baseline никогда не сокращается ради ускорения 
 ```md
 # Концептуальная память проекта
 
-> Сгенерировано из conceptual.json | YYYY-MM-DD | Задача: DEV-XXX | Цикл: N
+> Сгенерировано из conceptual.json | YYYY-MM-DD | Задача: T-NNN | Цикл проекта: N
 > ⚠ Не редактировать вручную — источник истины: conceptual.json
 
 ## explorer
@@ -398,8 +405,7 @@ Baseline никогда не сокращается ради ускорения 
 ### 5.5a. Снапшот состояния
 
 Скопируй текущие файлы памяти (`snapshot_targets` из конфига — те, что существуют)
-в каталог `work-area/memory/snapshots/cycle-NNN-YYYYMMDD-HHMM/`, где NNN — номер
-цикла. Снапшоты **append-only**: никогда не перезаписывай существующий снапшот.
+в каталог `work-area/memory/snapshots/cycle-NNN-YYYYMMDD-HHMM/`, где NNN — `project_cycle`. Снапшоты **append-only**: никогда не перезаписывай существующий снапшот.
 
 - Это даёт точку отката к известному-хорошему состоянию.
 - Удерживай не более `snapshot_retention` последних снапшотов; более старые —
@@ -412,14 +418,16 @@ Baseline никогда не сокращается ради ускорения 
 архивация, рекомпакция). Формат строки:
 
 ```json
-{"timestamp":"YYYY-MM-DD HH:MM","cycle":N,"task":"DEV-XXX","mutation":"add|promote|demote|archive|recompact","target_id":"HEURISTIC-ID","from_tier":"provisional","to_tier":"active","rule":"confirm_count>=M","reason":"подтверждена baseline в циклах 2,3","evidence":["finding_id-..."]}
+{"timestamp":"YYYY-MM-DD HH:MM","project_cycle":N,"task":"T-NNN","mutation":"add|promote|demote|archive|recompact","target_id":"HEURISTIC-ID","from_tier":"provisional","to_tier":"active","rule":"confirm_count>=M","reason":"подтверждена baseline в циклах 2,3","evidence":["finding_id-..."]}
 ```
 
 Правила:
 - `mutation` — тип изменения. `rule` — **детерминированное правило**, по которому
   принято решение. Допустимый словарь: `confirm_count>=M`, `refute_count>=K`,
   `active_cap_overflow`, `stale` (устаревание по `tiers.staleness_cycles`),
-  `zone_rewritten` (инвалидация по перезаписи зоны), `recompact`. Правило —
+  `zone_rewritten` (инвалидация по перезаписи зоны), `recompact`,
+  `migrate_cycle_numbering` (однократный переход на сквозную нумерацию, CHECKLIST, Шаг 4.7;
+  `mutation:"migrate"`). Правило —
   а **не** «на усмотрение LLM». Если правило не формализуемо — это сигнал, что
   мутация неправомерна (см. WI-3).
 - `reason` — человекочитаемое пояснение со ссылкой на конкретные циклы/наблюдения.
@@ -449,5 +457,6 @@ Baseline никогда не сокращается ради ускорения 
 - [ ] Каждая эвристика в `conceptual.json` ссылается в `evidence` на существующие `finding_id`/`entry_id` (проверь `check-memory-provenance.sh`)
 - [ ] `global-memory.md` отражает актуальное состояние задачи и ограничения
 - [ ] Все 4 файла памяти консистентны между собой (нет противоречий)
-- [ ] Снапшот состояния памяти создан в `snapshots/cycle-NNN-.../` (WI-6)
+- [ ] Снапшот состояния памяти создан в `snapshots/cycle-NNN-.../`, NNN = `project_cycle` (WI-6)
+- [ ] Новые записи `procedural.json`/`feedback.json` несут `task` = `T-NNN`, `task_cycle` и `project_cycle` из `state.json`; голого `cycle` в новых записях нет
 - [ ] Каждая мутация концептуальной памяти отражена строкой в `changelog.jsonl` с правилом и причиной (WI-6)

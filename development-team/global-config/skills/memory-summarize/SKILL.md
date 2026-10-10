@@ -41,8 +41,13 @@ writes: work-area/memory/**
 - `procedural_entries` — записи из procedural.json за текущий цикл (агент, действие, файлы, статус)
 - `feedback_entries` — записи из feedback.json за текущий цикл (тесты: passed/failed, guardian: вердикт/affected_zones/critical_issues)
 - `agent_ids` — список агентов, участвовавших в цикле (explorer, coder-back, tester, guardian, ...)
-- `cycle_number` — номер цикла (1, 2, 3)
-- `task_id` — идентификатор задачи (DEV-XXX)
+- `task_id` — идентификатор задачи (`T-NNN`), `task_cycle` (1–3 внутри задачи) и
+  `project_cycle` (сквозной номер цикла проекта) — из `work-area/memory/state.json`
+- **`current_cycle` во всех формулах этого навыка ≡ `project_cycle`.** Все поля
+  `created_cycle` / `last_confirmed_cycle` / `last_tested_cycle` и все окна
+  (`window_N`, `validation_window_cycles`, `staleness_cycles`) считаются в `project_cycle`.
+  `task_cycle` здесь не используется никогда: он не превышает 3 и сбрасывается с каждой
+  задачей, поэтому пороги в 5–10 циклов по нему недостижимы (диагностика S1)
 - `existing_conceptual` — содержимое `conceptual.json` (если существует) для дополнения, а не перезаписи (источник истины — JSON, не Markdown; WI-2)
 
 # Процедура
@@ -52,11 +57,11 @@ writes: work-area/memory/**
 Прежде чем начать, определи режим (триггер задаёт team-lead, см. его файл; параметры —
 `work-area/memory/config.json` → `recompaction`):
 
-- **incremental** (по умолчанию, внутри окна `window_N` циклов): дешёвое итеративное
+- **incremental** (по умолчанию, внутри окна `window_N` циклов проекта): дешёвое итеративное
   обновление — `existing_conceptual` подаётся на вход, эвристики дополняются/обновляются.
   Это **сознательное ограниченное отклонение** от канонической формулы ради экономии
   (зафиксировано в WI-9).
-- **recompact** (раз в `window_N` циклов или по `drift_trigger`): **stateless-рекомпакция**.
+- **recompact** (когда `project_cycle − state.json.last_recompact_cycle ≥ window_N` или по `drift_trigger`): **stateless-рекомпакция**.
   Канонический проход `ConMem = LLM(ProcMem, FeedMem)`:
   - `conceptual.json` выводится **с нуля**, **только** из `procedural.json` + `feedback.json`
     за всю историю. **`existing_conceptual` НЕ подаётся в промпт** — иначе накопленный дрейф
@@ -105,20 +110,17 @@ writes: work-area/memory/**
 
 ### Манифест baseline (`work-area/memory/baseline/manifest.json`)
 
-Схема (источник истины по составу якоря; версионируется, ведётся вручную/Team Lead):
-```json
-{
-  "project": "[название проекта]",
-  "updated": "YYYY-MM-DD",
-  "test_ids": ["BASE-001", "BASE-002"],
-  "description": "стабильный регрессионный набор; меняется осознанно, не под задачу"
-}
-```
+Схема манифеста и правила его посева/расширения — **только** в `memory-update`, Шаг 0
+(источник истины с 1.8.0; поля `created_cycle`/`updated_cycle` — `project_cycle`). Здесь
+схема намеренно не дублируется: прежняя копия разошлась с источником (диагностика S1d).
+Этот навык манифест только читает — как список `test_ids`, по которым считаются
+baseline-результаты.
 
 ### Процедура «проверить эвристику X против baseline-only за N циклов»
 
 `N` = `baseline.validation_window_cycles` из `work-area/memory/config.json`.
-1. Собери записи `feedback.json` за последние N циклов.
+1. Собери записи `feedback.json` с `project_cycle > current_cycle − N` — последние N циклов
+   проекта, через границы задач.
 2. Отфильтруй тесты с `source:"baseline"` (scoped отбрось).
 3. Сопоставь baseline-исходы в зоне эвристики X с её `rule` и `falsification_condition`.
 4. Вывод: подтверждена (рост `confirm_count`), опровергнута (рост `refute_count`)
