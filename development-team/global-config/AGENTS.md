@@ -128,9 +128,12 @@ Rules:
   history is kept by WI-6 snapshots, not by git.
 - **Base (`current_task.base_sha`).** Recorded by Team Lead from the first coder report of
   the task (`task_cycle = 1`); every later cycle's coders must find the same `HEAD`.
-- **Parallel coders.** At `task_cycle = 1` a dirty file is acceptable only if it is listed in
-  «Затронутые файлы» of *any* DEV section of this task's `design.md` — that is the other
-  coder working at the same time. Anything else is `BLOCKED`. `HEAD` is race-free: there are
+- **Parallel coders and DevOps.** At `task_cycle = 1` a dirty file is acceptable only if it is
+  listed in «Затронутые файлы» of *any* DEV section of this task's `design.md` (the other
+  coder working at the same time) or declared in `work-area/reports/devops-status.md` (the
+  DevOps Gate runs before coders and may change infrastructure files). Anything else is
+  `BLOCKED`. For the same reason Guardian treats files declared by DevOps as legitimate, not
+  as scope creep. `HEAD` is race-free: there are
   no commits.
 - **Continuation after ESCALATE** (`parent: "T-NNN"`) inherits the parent's `base_sha`; the
   parent's uncommitted changes are its legitimate starting point, so Layer 1 does not ask
