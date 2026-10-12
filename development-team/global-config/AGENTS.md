@@ -64,17 +64,21 @@ number, add 1" — nothing that needs a shell.
     "title": "rate-limit on /auth/login",
     "status": "IN_PROGRESS",
     "start_cycle": 14,
-    "task_cycle": 2
+    "task_cycle": 2,
+    "base_sha": "3f9c2e1",
+    "worktree_resolved": null
   }
 }
 ```
 
 | Event | Change in `state.json` |
 |---|---|
-| Intake of a new task | `task_seq += 1`, `project_cycle += 1`, `current_task = {id: "T-<task_seq as 3 digits>", start_cycle: project_cycle, task_cycle: 1, status: "IN_PROGRESS", parent: null}` |
+| Intake of a new task | **first** run Layer 1 of «Git lifecycle» on the *old* `current_task` (it is about to be replaced), then `task_seq += 1`, `project_cycle += 1`, `current_task = {id: "T-<task_seq as 3 digits>", start_cycle: project_cycle, task_cycle: 1, status: "IN_PROGRESS", parent: null, base_sha: null, worktree_resolved: null}`; for a continuation: `parent: "T-NNN"`, `base_sha` copied from the parent |
+| First coder report of the task (`task_cycle = 1`) arrives | `current_task.base_sha = <HEAD from the report>` |
 | REWORK | `project_cycle += 1`, `current_task.task_cycle += 1` |
 | Agent re-run inside the same cycle (incident) | nothing — the artifact of that cycle is overwritten, as before |
-| ACCEPT / ESCALATE | `current_task.status = "ACCEPTED" \| "ESCALATED"` |
+| ACCEPT / ESCALATE | `current_task.status = "ACCEPTED" \| "ESCALATED"`, `current_task.worktree_resolved = false` (see «Git lifecycle») |
+| User confirms the closed task's changes are committed or discarded | `current_task.worktree_resolved = true` |
 | Recompaction (`memory-update`, mode `recompact`) | `last_recompact_cycle = project_cycle` |
 
 Rules:
@@ -91,6 +95,49 @@ Rules:
   `current_task`; parallel tasks need separate work areas.
 - **Delegations always carry all three values** (`task_id`, `task_cycle`, `project_cycle`)
   — see `task-delegation-format`.
+
+# Git lifecycle — READ FIRST
+
+Guardian's Scope Compliance is the only backstop for the known limitation "edit bound to
+paths is bypassed through the shell" (README, «Известные ограничения»): a write done
+through the shell never appears in a coder's report, so it can only be caught by comparing
+against git. That comparison needs a defined base — before 1.12.0 there was none
+(diagnostic S2), and nothing said who commits, when, or whether `work-area/` is in git.
+
+**Invariant: nobody commits inside a task.** Therefore `HEAD` stays equal to the task's
+base for the whole task, and the accumulated changes of all its cycles — which is exactly
+what gets accepted — are read with one command, no commit arithmetic:
+
+```
+git status --porcelain -uall -- . ':(exclude)work-area'
+```
+
+| Who | When | What |
+|---|---|---|
+| Team Lead | Intake | **Layer 1.** If the previous task is `ACCEPTED`/`ESCALATED` with `worktree_resolved ≠ true` and the new task is not its continuation — ask the user, *before* Explorer, to commit or discard those changes; record `worktree_resolved = true` only on their confirmation |
+| Coders | pre-flight, every cycle | **Layer 2.** `git rev-parse HEAD` + the command above; record the base and the tree state in the own report; mismatch → status `BLOCKED` |
+| Guardian | audit | compares `HEAD` with the recorded base; takes the real list of changes from git, all project zones (not only `src/`) |
+| Reviewer → user | after ACCEPT | «Готово к коммиту» block in the final report: every changed file of the task plus a suggested message `T-NNN: …`; **the user commits** |
+
+Rules:
+
+- **Coders do not commit** — `git commit*` is `deny` in `opencode.json`, so the base
+  cannot drift mid-task. `git push*` stays `deny` for everyone. Committing is a human step.
+- **`work-area/` is not part of the project's git** (`.gitignore`, CHECKLIST Step 4), and is
+  excluded from every diff anyway, so the rule holds in projects that do track it. Memory
+  history is kept by WI-6 snapshots, not by git.
+- **Base (`current_task.base_sha`).** Recorded by Team Lead from the first coder report of
+  the task (`task_cycle = 1`); every later cycle's coders must find the same `HEAD`.
+- **Parallel coders.** At `task_cycle = 1` a dirty file is acceptable only if it is listed in
+  «Затронутые файлы» of *any* DEV section of this task's `design.md` — that is the other
+  coder working at the same time. Anything else is `BLOCKED`. `HEAD` is race-free: there are
+  no commits.
+- **Continuation after ESCALATE** (`parent: "T-NNN"`) inherits the parent's `base_sha`; the
+  parent's uncommitted changes are its legitimate starting point, so Layer 1 does not ask
+  and Layer 2 accepts files listed in the parent's coder reports.
+- **Residual risk, stated plainly.** If an uncommitted previous task touched the *same*
+  files as the new one, Layer 2 cannot tell them apart. Only Layer 1 — the question to the
+  user — covers that case, which is why it exists.
 
 # How Skills Work (execution model) — READ FIRST
 
@@ -129,6 +176,7 @@ Rules:
 - **Architect** must call `skill({ name: "confidence-calibrate" })` for every significant estimate (risks, change volume, reversibility). Estimates without a confidence % are insufficient.
 - **Architect** must include a "Procedural Reflection" section in design.md — a meta-analysis of *how* the design was reached, not just what was designed.
 - **Coders (front/back)** have a SCOPE GATE: (1) touch only files listed in the task, (2) report but don't fix issues outside scope, (3) no "while I'm here" improvements, (4) honor the change budget exactly. Violation = scope creep caught by Guardian.
+- **Coders never commit** and start every cycle with a git pre-flight (base + tree state into their report) — see «Git lifecycle». A dirty tree outside the rules → `BLOCKED`, not "work around it".
 - **Coders and Tester** must each call `skill({ name: "devops-gate-check" })` before starting work. This is separate from the Team Lead's devops-gate-check.
 - **Coders** must verify API contracts from design.md before implementing. If the task file lacks a "Контракты" field, they must request it from Team Lead.
 - **Coders** must check the local `AGENTS.md` (section «Назначение директорий») for their actual Owns directories. The global Agent Roster shows defaults (`src/frontend/`, `src/backend/`); the local AGENTS.md may override them (e.g., `static/` for vanilla JS, `src/` + `core/` + `routes/` for backend). Working outside the local Owns = scope creep.

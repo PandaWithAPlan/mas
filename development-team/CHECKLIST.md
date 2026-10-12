@@ -1,6 +1,6 @@
 # Чеклист адаптации development-team под проект
 
-Версия чеклиста: 1.11.0  
+Версия чеклиста: 1.12.0  
 Система: OpenCode Multi-Agent System (MALMAS)
 
 Используй этот документ при каждом переносе конфигурации на новый проект.
@@ -184,6 +184,14 @@ mkdir -p work-area/memory/baseline
 mkdir -p work-area/memory/snapshots
 ```
 
+`work-area/` — служебная область агентного цикла, в git проекта она **не входит**
+(см. `global-config/AGENTS.md`, «Git lifecycle»): отчёты каждого цикла иначе засоряют
+историю, а историю памяти и так ведут снапшоты WI-6.
+
+```bash
+grep -qxF 'work-area/' .gitignore 2>/dev/null || echo 'work-area/' >> .gitignore
+```
+
 ### 4.1 Фактические слои памяти
 
 `procedural.json` и `feedback.json` — это **объекты с ключом `history`**, а не массивы.
@@ -298,6 +306,7 @@ printf '{"task_seq": 0, "project_cycle": 0, "last_recompact_cycle": 0, "current_
 - [ ] `conceptual.md` и `global-memory.md` созданы (могут быть пустыми)
 - [ ] `changelog.jsonl` создан пустым
 - [ ] `state.json` создан с нулевыми счётчиками и `"current_task": null` (Шаг 4.6)
+- [ ] `work-area/` добавлен в `.gitignore` проекта
 - [ ] `work-area/memory/config.json` создан копией `project-config/memory-config.json`
   (**без него пороги ε / ярусов / рекомпакции недостижимы для агентов**)
 - [ ] `baseline/manifest.json` **не** создавался вручную — его посеет `team-lead` после первого цикла
@@ -308,6 +317,10 @@ printf '{"task_seq": 0, "project_cycle": 0, "last_recompact_cycle": 0, "current_
 ## Шаг 5 — Проверить конфигурацию перед первым запуском
 
 - [ ] Нет оставшихся плейсхолдеров `[ЗАПОЛНИТЬ]`, `/path/to/`, `FRONTEND_DIR`, `BACKEND_DIR`
+- [ ] **Рабочее дерево чистое** (без учёта `work-area/`): `git status --porcelain -- . ':(exclude)work-area'`
+  ничего не выводит. Первая задача начинается на чистом дереве, иначе кодер на pre-flight
+  остановится со статусом `BLOCKED` — чужие незакоммиченные изменения нельзя отличить от
+  изменений задачи (см. «Git lifecycle»)
 - [ ] `work-area/memory/config.json` на месте и валиден:
   `python3 -c "import json; json.load(open('work-area/memory/config.json')); print('OK')"`
 - [ ] `opencode.json` валиден. **Важно:** проектный `opencode.json` содержит комментарии `//`
@@ -333,10 +346,14 @@ printf '{"task_seq": 0, "project_cycle": 0, "last_recompact_cycle": 0, "current_
 
 ## Шаг 6 — Первый запуск
 
+0. Закоммитить (или отложить) всё, что не относится к агентному циклу: задача стартует на чистом дереве
 1. Дать первую задачу team-lead: на Intake он присвоит ей `T-001` и `project_cycle = 1`
    в `state.json`, затем через `session-init` создаст `work-area/sessions/session-T-001.md`
 2. Убедиться, что после Intake `state.json` содержит `current_task.id = "T-001"`
 3. Убедиться, что `memory-retrieve` не падает на пустых файлах памяти
+4. После ACCEPT закоммитить файлы из блока «Готово к коммиту» итогового отчёта (агенты не
+   коммитят — это человеческий шаг) и подтвердить это team-lead: на следующем Intake он
+   спросит, если подтверждения не было
 
 ---
 
