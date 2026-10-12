@@ -34,7 +34,7 @@ Guardian читает до 8 артефактов + дифф кода и про�
 task_cycle: 1–3                            // цикл внутри задачи, не project_cycle
 affected_zones: ["auth", "payment"]        // из feedback.json, предыдущий цикл этой же задачи
 previous_critical_categories: ["security"]  // из feedback.json, категории прошлых критических замечаний
-files_to_analyze_count: 5                  // сколько файлов в диффе
+files_to_analyze_count: 5                  // сколько файлов в git status задачи (без work-area/), не только src/
 has_frontend: boolean
 has_backend: boolean
 is_partial_tested: boolean                 // TR-NNN.md PARTIAL COMPLETION?
@@ -123,7 +123,7 @@ Test Analysis (уже приоритет 3 по умолчанию) помеча
       {priority: 4, zone: "code_quality", enhanced: false},
       {priority: 5, zone: "tech_debt", enhanced: false}
     ],   // порядок зон фиксирован: security → correctness → test_analysis → code_quality → tech_debt
-    files_priority: ["src/backend/auth/login.py", "src/backend/auth/oauth.py", ...],
+    files_priority: ["src/backend/auth/login.py", "src/backend/auth/oauth.py", ...],  // из git status задачи, все зоны проекта
     stop_on_blocker: true,
     strategy: "Выполнять зоны по порядку. При обнаружении BLOCKER в security — немедленно STOP_PARTIAL с REWORK."
   }

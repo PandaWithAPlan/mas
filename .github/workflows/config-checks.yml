@@ -271,6 +271,44 @@ jobs:
           fi
           echo "OK: негативная фикстура отработала (нарушение поймано)"
 
+      # S2 (DIAGNOSTICS, 4-я диагностика): внутри задачи никто не коммитит — иначе база
+      # сдвигается и Scope Compliance у Guardian сверяет неполный список изменений, то есть
+      # теряет единственную страховку от записи в обход привязки edit к путям.
+      - name: Жизненный цикл git — агенты не коммитят (S2)
+        run: |
+          python3 - <<'PY'
+          import json, sys
+
+          def offenders(cfg):
+              bad = []
+              for name, agent in cfg.get("agent", {}).items():
+                  bash = agent.get("permission", {}).get("bash")
+                  if isinstance(bash, dict):
+                      if bash.get("git commit*") != "deny":
+                          bad.append(name)
+                  elif bash not in (None, "deny", "ask"):
+                      bad.append(name)   # bash: allow без денилиста
+              return bad
+
+          cfg = json.load(open("global-config/opencode.json", encoding="utf-8"))
+          bad = offenders(cfg)
+          if bad:
+              print("FAIL: git commit* не запрещён у: %s (см. AGENTS.md, «Git lifecycle»)" % ", ".join(bad), file=sys.stderr)
+              sys.exit(1)
+
+          # Негатив: проверка обязана поймать возврат к "ask"
+          fixture = {"agent": {"coder-back": {"permission": {"bash": {"*": "allow", "git commit*": "ask"}}}}}
+          if not offenders(fixture):
+              print("FAIL: проверка пропустила git commit*: ask", file=sys.stderr)
+              sys.exit(1)
+
+          src = open("global-config/agents/guardian.md", encoding="utf-8").read()
+          if "Изменённые файлы в `src/`" in src:
+              print("FAIL: guardian снова берёт изменения из src/, а не из git", file=sys.stderr)
+              sys.exit(1)
+          print("OK: агенты не коммитят, guardian берёт фактические изменения из git; негативная фикстура отработала")
+          PY
+
       - name: Не осталось плейсхолдеров в глобальном слое
         run: |
           set -eu
