@@ -68,6 +68,9 @@ task_cycle: 1 | 2 | 3            // цикл внутри задачи: 1 — о
 project_cycle: N                 // сквозной номер цикла проекта; он же NNN во всех путях
                                  // артефактов этого цикла (TR-NNN.md, guardian-NNN.md, ...)
 
+base_sha: "3f9c2e1" | null       // current_task.base_sha — база задачи для git-проверок
+                                 // (null только на task_cycle 1 обычной задачи: её фиксирует кодер)
+
 is_rework: boolean
 
 rework_reason: "TEST-003 regression in payment" | null
@@ -139,9 +142,9 @@ MALMAS-паттерн: prompt агента =
 | `explorer` | При повторном цикле: «Прочитай предыдущий explore-report.md и зафиксируй diff» |
 | `analyst` | «Основа — explore-report.md. Не домысливай структуру проекта» |
 | `architect` | «Строго на базе существующего кода из explore-report.md. Ты НЕ создаёшь task-файлы». При повторном цикле — явный список путей `guardian-NNN.md` и `TR-NNN.md` **циклов этой задачи** (`NNN` от `start_cycle` до `project_cycle − 1`): отчёты других задач в `read_paths` не передаются |
-| `coder-front` / `coder-back` | «Change budget: [N] файлов из списка в design.md. Файлы вне списка — не трогать. Если нужно больше — сообщи Team Lead. Файлы, похожие, но НЕ трогать: [из design.md]» |
+| `coder-front` / `coder-back` | «Change budget: [N] файлов из списка в design.md. Файлы вне списка — не трогать. Если нужно больше — сообщи Team Lead. Файлы, похожие, но НЕ трогать: [из design.md]». Для git pre-flight («Git lifecycle»): `base_sha` (на `task_cycle ≥ 2` и у продолжения с `parent`), а у продолжения — пути `dev-report-*` родителя: их файлы на старте допустимы |
 | `tester` | «Перед тестами вызови skill(devops-gate-check). Только функциональность, не качество кода» |
-| `guardian` | «Запускается строго после Tester. TR-NNN.md обязателен» |
+| `guardian` | «Запускается строго после Tester. TR-NNN.md обязателен». `base_sha` задачи — для сверки `HEAD` и источника фактических изменений |
 | `reviewer` | «Пиши для пользователя. Не упоминай агентов и циклы. Session-файл опционален» |
 | `devops` | «Режим: исполнитель. Файлы: инфраструктурные. Секреты не раскрывать» |
 
