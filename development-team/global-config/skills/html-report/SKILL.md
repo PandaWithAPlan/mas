@@ -293,6 +293,18 @@ graph TD
       </div>
     </section>
 
+    <!-- 7.5. ГОТОВО К КОММИТУ -->
+    <section>
+      <h2><span class="icon">✅</span> Готово к коммиту</h2>
+      <div class="card">
+        <p>Изменения приняты, но <strong>не закоммичены</strong> — коммит выполняете вы.
+           Ниже — все изменённые файлы и предложенное сообщение.</p>
+        {data.commit
+          ? '<table> файл | статус </table> + <pre>git add &lt;файлы&gt;\ngit commit -m "{data.commit.suggested_message}"</pre>'
+          : '<p style="color:var(--yellow)">⚠ Список изменённых файлов не собран — проверьте git status вручную перед коммитом.</p>'}
+      </div>
+    </section>
+
     <!-- 8. СЛЕДУЮЩИЕ ШАГИ -->
     <section>
       <h2><span class="icon">➡</span> Следующие шаги</h2>

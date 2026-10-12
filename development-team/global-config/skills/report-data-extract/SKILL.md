@@ -42,6 +42,7 @@ dev_front_path: "work-area/reports/dev-report-FRONT-NNN.md" | null
 dev_back_path: "work-area/reports/dev-report-BACK-NNN.md" | null
 tr_path: "work-area/reports/test-results/TR-NNN.md"
 guardian_path: "work-area/reports/guardian-NNN.md"
+doc_keeper_summary: "..." | null    // сводка doc-keeper из команды Team Lead (список docs/)
 ```
 
 ## Шаг 1. Прочитай все источники
@@ -162,6 +163,25 @@ guardian: {
   ]
 }
 ```
+
+### Для блока «Готово к коммиту»
+
+Источник — таблица «Фактические изменения (git)» из `guardian_path`: это полный
+накопленный список изменений задачи за все циклы («Git lifecycle» в `AGENTS.md`). Отчёты
+кодеров последнего цикла для этого **не** годятся — в них только файлы этого цикла.
+Добавь к нему файлы `docs/` из `doc_keeper_summary`: doc-keeper пишет после Guardian, и в
+его таблицу они не попадают.
+
+```
+commit: {
+  files: [{path: "src/auth/login.py", status: "M"}, {path: "docs/src-auth-login.md", status: "A"}, ...],
+  suggested_message: "T-NNN: <суть изменения одной строкой>",
+  base_sha: "3f9c2e1"
+}
+```
+
+Если таблицы в `guardian-NNN.md` нет — `commit: null` и строка в `data_sources_missing`:
+пользователь должен узнать, что список файлов не собран, а не получить неполный.
 
 ## Шаг 3. Сформируй сводные данные
 
